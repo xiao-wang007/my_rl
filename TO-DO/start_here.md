@@ -19,8 +19,8 @@ I’ll assume you’re controlling a Franka Emika Panda, you want the end effect
 
 Goal:
 
-* You give a target pose or target position in Cartesian space, call it ( x^* ) (position) or ((R^*, p^*)) (orientation + position).
-* You also give a desired end-effector spatial velocity ( v^* ) (linear and maybe angular).
+* You give a target pose or target position in Cartesian space, call it $x^*$  position or $R^*, p^*$ (orientation + position).
+* You also give a desired end-effector spatial velocity $v^*$ (linear and maybe angular).
 * The robot should move the end effector so that:
 
   * it's near the target pose,
@@ -28,7 +28,7 @@ Goal:
 
 This is *not* pure “go to pose and stop.” It’s “track a task-space motion reference.” That’s good because it’s closer to dynamic manipulation.
 
-We will train a policy (\pi_\theta(o_t) \to a_t) with SAC to minimize pose error and velocity error.
+We will train a policy $\pi_\theta(o_t) \to a_t$ with SAC to minimize pose error and velocity error.
 
 ---
 
@@ -38,7 +38,7 @@ We will train a policy (\pi_\theta(o_t) \to a_t) with SAC to minimize pose error
 
 You have three reasonable choices. This is important because it changes stability.
 
-Option A. Joint velocity command (\dot{q}_{cmd})
+Option A. Joint velocity command $\dot{q}_{cmd}$
 
 * Policy outputs a 7D vector (for Panda’s 7 joints), clipped to safe limits.
 * Low-level controller in sim (and later on the arm) takes that as the commanded velocity.
@@ -46,15 +46,15 @@ Option A. Joint velocity command (\dot{q}_{cmd})
 Pros: easy, smooth.
 Cons: policy has to learn its own IK implicitly.
 
-Option B. Task-space twist command (v_{ee,cmd})
+Option B. Task-space twist command $v_{ee,cmd}$
 
-* Policy outputs desired end-effector spatial velocity (e.g. ($v_x, v_y, v_z, \omega_x, \omega_y, \omega_z$)).
+* Policy outputs desired end-effector spatial velocity (e.g. $v_x, v_y, v_z, \omega_x, \omega_y, \omega_z$).
 * You run an operational-space/IK controller that turns that twist into joint velocities/torques.
 
 Pros: very aligned with “reach a Cartesian target at a velocity.”
 Cons: you must provide a stable differential IK layer every step.
 
-Option C. Torque (\tau)
+Option C. Torque $\tau$
 
 * Policy outputs 7 joint torques.
 
@@ -82,34 +82,34 @@ A solid minimal observation:
 
 1. Robot state
 
-   * ( q_t \in \mathbb{R}^7 )  (joint angles)
-   * ( \dot{q}_t \in \mathbb{R}^7 ) (joint velocities)
+   * $q_t \in \mathbb{R}^7$  (joint angles)
+   * $\dot{q}_t \in \mathbb{R}^7$ (joint velocities)
 
 2. End-effector task state
 
-   * ( p_t \in \mathbb{R}^3 ): current end-effector position in base frame
-   * ( R_t ): current orientation. Represent as 3D axis-angle or 6D continuous rep; don’t give raw quaternions directly without care about sign flip.
-   * ( v_{ee,t}^{lin} \in \mathbb{R}^3 ): current linear velocity of the EE in base frame
-   * ( v_{ee,t}^{ang} \in \mathbb{R}^3 ): current angular velocity
+   * $p_t \in \mathbb{R}^3$: current end-effector position in base frame
+   * $R_t$: current orientation. Represent as 3D axis-angle or 6D continuous rep; don’t give raw quaternions directly without care about sign flip.
+   * $v_{ee,t}^{lin} \in \mathbb{R}^3$: current linear velocity of the EE in base frame
+   * $v_{ee,t}^{ang} \in \mathbb{R}^3$: current angular velocity
 
 3. Goal / command
 
-   * ( p^* \in \mathbb{R}^3 ): target Cartesian position
-   * orientation target, e.g. ( R^* ) as axis-angle
-   * desired EE linear vel ( v^{*}_{lin} \in \mathbb{R}^3 )
-   * desired EE angular vel ( v^{*}_{ang} \in \mathbb{R}^3 )
+   * $p^* \in \mathbb{R}^3$: target Cartesian position
+   * orientation target, e.g.  $R^*$ as axis-angle
+   * desired EE linear vel $v^{*}_{lin} \in \mathbb{R}^3$
+   * desired EE angular vel $v^{*}_{ang} \in \mathbb{R}^3$
 
 4. Errors (this really helps SAC learn faster)
 
-   * ( e_p = p^* - p_t )  (position error)
-   * ( e_R ): orientation error in some minimal 3D form (log map of (R_t^\top R^*))
-   * ( e_v^{lin} = v^{*}*{lin} - v^{lin}*{ee,t} )
-   * ( e_v^{ang} = v^{*}*{ang} - v^{ang}*{ee,t} )
+   * $e_p = p^* - p_t$ (position error)
+   * $e_R$: orientation error in some minimal 3D form (log map of $R_t^\top R^*$)
+   * $e_v^{lin} = v^{*}_{lin} - v^{lin}_{ee,t}$
+   * $e_v^{ang} = v^{*}_{ang} - v^{ang}_{ee,t}$
 
 You can either feed raw states + targets and let the net subtract, or explicitly include the precomputed error terms. Including the error terms is basically giving it “proportional control structure for free,” which massively reduces sample complexity.
 
 So your observation could be a single concatenated float vector:
-[ o_t = [q, \dot{q}, e_p, e_R, e_v^{lin}, e_v^{ang}, p_t, v_{ee,t}^{lin}, v_{ee,t}^{ang}] ]
+$o_t =[q, \dot{q}, e_p, e_R, e_v^{lin}, e_v^{ang}, p_t, v_{ee,t}^{lin}, v_{ee,t}^{ang}]$
 
 That’s ~7 + 7 + (3+3+3+3) + 3 + 3 + 3 ≈ 35-40 dims. That’s fine for SAC.
 
@@ -124,27 +124,26 @@ This is the heart. We give SAC dense shaping so it doesn’t have to “get luck
 At each timestep (t), define:
 
 * Position tracking cost
-  ( c_p = \lVert e_p \rVert^2 )
+  $c_p = \lVert e_p \rVert^2$
 
 * Orientation tracking cost
-  ( c_R = \lVert e_R \rVert^2 )
+  ( $c_R = \lVert e_R \rVert^2$ )
 
 * Velocity tracking cost
-  ( c_v = \lVert e_v^{lin} \rVert^2 + \beta \lVert e_v^{ang} \rVert^2 )
+  ( $c_v = \lVert e_v^{lin} \rVert^2 + \beta \lVert e_v^{ang} \rVert^2$ )
 
 * Action smoothness / effort cost
-  ( c_a = \lVert \dot{q}_{cmd} \rVert^2 )  (penalize crazy joint velocities)
+  ( $c_a = \lVert \dot{q}_{cmd} \rVert^2$ )  (penalize crazy joint velocities)
 
 * Joint limit margin cost (safety shaping)
   For each joint i, penalize being too close to hard limits:
-  ( c_{lim} = \sum_i \text{softplus}( |q_i - q_i^{mid}| - m ) )
+  ( $c_{lim} = \sum_i \text{softplus}( |q_i - q_i^{mid}| - m )$ )
   where (q_i^{mid}) is the midrange between min/max and m is allowed margin.
   This gently discourages stretching to hardware limits.
 
 Then make reward = negative weighted sum:
-[
+$[
 r_t =
-
 * w_p c_p
 * w_R c_R
 * w_v c_v
@@ -152,11 +151,11 @@ r_t =
 * w_{lim} c_{lim}
 
 - r_{\text{bonus}}
-  ]
+  ]$
 
 with an optional sparse-ish success bonus:
 
-* ( r_{\text{bonus}} = r_{succ} ) if (|e_p| < \epsilon_p) **and** (|e_v^{lin}| < \epsilon_v).
+* ( $r_{\text{bonus}} = r_{succ}$ ) if ($|e_p| < \epsilon_p$) **and** ($|e_v^{lin}| < \epsilon_v$).
   (Gives the policy a “yes good keep doing that” anchor.)
 
 Good starting weights (tune later):
