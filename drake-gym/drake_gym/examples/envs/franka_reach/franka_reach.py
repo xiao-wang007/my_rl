@@ -130,17 +130,25 @@ def make_sim(generator,
         ee for the task.
         But do option 1 first. Then later implement option 2. Just to 
         compare'''
+
     # Actions are positions sent to plant.
-    ''' here I should modify to franka's case'''
-    !!!!!!!!!!!!!!!!!!!!
-    actuation = builder.AddSystem(Multiplexer([1, 1]))
-    prismatic_actuation_force = builder.AddSystem(PassThrough(1))
-    # Zero torque to the revolute joint --it is underactuated.
-    revolute_actuation_torque = builder.AddSystem(ConstantVectorSource([0]))
-    builder.Connect(revolute_actuation_torque.get_output_port(),
-                    actuation.get_input_port(1))
-    builder.Connect(prismatic_actuation_force.get_output_port(),
+    actuation = builder.AddSystem(Multiplexer([1]*7)) # 7 input ports, 1 for each joint
+
+    ''' PassThrough() for naming (e.g. multiple .sdf in the same plant) and 
+        exporting the input port for RL agent.
+    '''
+    jvel_actuation_ = builder.AddSystem(PassThrough(7))
+
+    ''' if there is under-actuation '''
+    # # Zero torque to the revolute joint --it is underactuated.
+    # revolute_actuation_torque = builder.AddSystem(ConstantVectorSource([0]))
+    # builder.Connect(revolute_actuation_torque.get_output_port(),
+    #                 actuation.get_input_port(1))
+
+    builder.Connect(jvel_actuation_.get_output_port(),
                     actuation.get_input_port(0))
     builder.Connect(actuation.get_output_port(),
-                    plant.get_actuation_input_port(agent))
-    builder.ExportInput(prismatic_actuation_force.get_input_port(), "actions")
+                    plant.get_actuation_input_port(agent)) # agent is a model instance
+    
+    # Export for RL agent
+    builder.ExportInput(jvel_actuation_.get_input_port(), "actions")
