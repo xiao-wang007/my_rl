@@ -155,6 +155,7 @@ def make_sim(generator,
     # Export for RL agent
     builder.ExportInput(jvel_actuation_.get_input_port(), "actions_jnt_vel")
 
+    ######################### Observer
     class observation_publisher(LeafSystem):
         def __init(self, noise=False):
             LeafSystem.__init__(self)
@@ -221,6 +222,7 @@ def make_sim(generator,
                         rgbd_camera.query_object_input_port())
         builder.ExportOutput(rgbd_camera.color_image_output_port(), "camera1_stream") 
 
+    ######################### Disturbance
     class DisturbanceGenerator(LeafSystem):
         def __init__(self, plant, force_mag, period):
             ''' the original example is cartpole, the disturbance force 
@@ -273,4 +275,12 @@ def make_sim(generator,
     simulator = Simulator(diagram)
     simulator.Initialize()
             
-    ''' next up: # Episode end conditions, line 254 '''
+    ######################### Episode termination
+    def monitor(context, state_view=StateView):
+        plant_context = plant.GetMyContextFromRoot(context)
+        state = plant.GetOutputPort().Eval(plant_context)
+        s = state_view(state)
+
+        # truncation: the episode duration reaches time limit
+        if context.get_time() >= time_limit:
+            if debug:
