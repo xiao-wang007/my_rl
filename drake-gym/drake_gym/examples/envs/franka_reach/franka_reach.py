@@ -70,6 +70,10 @@ def make_sim(generator,
              monitoring_camera=False,
              add_disturbances=False):
 
+    ''' RL goal or parameters '''
+    p_ee_goal_base = [0.5, 0.0, 0.5]
+    rot_ee_goal_base = RollPitchYaw(0, np.pi/2, 0).ToQuaternion()
+
     builder = DiagramBuilder()
 
     multibody_plant_config = MultibodyPlantConfig(
@@ -79,11 +83,16 @@ def make_sim(generator,
         )
 
     plant, scene_graph = AddMultibodyPlant(multibody_plant_config, builder)
+    plant_compute, scene_graph_compute = AddMultibodyPlant(multibody_plant_config, builder)
 
     # Add assets to the plant.
     agent = AddAgent(plant)
     plant.Finalize()
     plant.set_name("plant")
+    panda_model_instance_compute = AddAgent(plant_compute)
+    plant_compute.Finalize()
+    plant_compute.set_name("plant_compute")
+    plant_compute_context = plant.CreateDefaultContext()
 
     # Add assets to the controller plant.
     controller_plant = MultibodyPlant(time_step=controller_time_step)
@@ -276,11 +285,138 @@ def make_sim(generator,
     simulator.Initialize()
             
     ######################### Episode termination
+    # Episode end conditions:
     def monitor(context, state_view=StateView):
         plant_context = plant.GetMyContextFromRoot(context)
-        state = plant.GetOutputPort().Eval(plant_context)
+        state = plant.GetOutputPort("continuous_state").Eval(plant_context)
         s = state_view(state)
 
-        # truncation: the episode duration reaches time limit
-        if context.get_time() >= time_limit:
+        ''' Truncation: the episode duration reaches the time limit. 
+            Need this for finite horizon and stable learning '''
+        if context.get_time() > time_limit: # in RL, usually this is measured in steps right?
             if debug:
+                print("Episode reached time limit.")
+            return EventStatus.ReachedTermination(
+                diagram,
+                "time limit")
+
+        ''' Define termination by goal or safety constraints violation '''
+        # for franka-reaching, defined distance-to-goal
+        plant_compute.SetPositions(plant_compute_context,
+                                   s.panda_joint_q)
+        # TODO: change to "dummy1" later after welding finger to ee_link                    
+        ee_frame = plant_compute.GetFrameByName("panda_link8")
+        base_frame = plant_compute.GetFrameByName("panda_link0")
+        X_base_ee = plant_compute.CalcPose(plant_compute_context, base_frame, ee_frame)
+        p_ee_base = X_base_ee.translation()
+        rot_ee_base = X_base_ee.rotation().ToQuaternion()
+
+        dist_to_goal = np.linalg.norm(p_ee_base - np.array(p_ee_goal_base))
+        if dist_to_goal < 0.05:  # within 5 cm of the goal
+            if debug:
+                print("Reached goal!")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Reached goal")
+        
+        # quaternion distance
+        def quat_error(q_d, q_c):
+            """
+            q = [w, x, y, z] convention
+            Returns 3D orientation error vector.
+            """
+            # Ensure shortest path (handle double cover)
+            if np.dot(q_d, q_c) < 0:
+                q_c = -q_c
+            
+            # Error quaternion: q_e = q_d ⊗ q_c*
+            w_d, x_d, y_d, z_d = q_d
+            w_c, x_c, y_c, z_c = q_c
+            
+            # q_c conjugate (inverse for unit quaternion)
+            # q_e = q_d * conj(q_c)
+            w_e = w_d*w_c + x_d*x_c + y_d*y_c + z_d*z_c
+            x_e = -w_d*x_c + x_d*w_c - y_d*z_c + z_d*y_c
+            y_e = -w_d*y_c + x_d*z_c + y_d*w_c - z_d*x_c
+            z_e = -w_d*z_c - x_d*y_c + y_d*x_c + z_d*w_c
+            
+            # For small errors: error ≈ 2 * [x_e, y_e, z_e]
+            return 2.0 * np.array([x_e, y_e, z_e])
+
+        ori_error = quat_error(np.array(rot_ee_goal_base),
+                               rot_ee_base.wxyz())
+        angle_error = np.linalg.norm(ori_error)
+        if angle_error < 0.2:  # within 0.2 rads in axis-angle angle error
+            if debug:
+                print("Reached goal orientation!")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Reached goal orientation")
+
+        # Joint limits for Franka Panda (from URDF, in radians)
+        q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
+        q_min = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
+        v_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]) # panda hardware limits
+        # u_up = np.array([87, 87, 87, 87, 12, 12, 12])
+        
+        # Termination: Joint position limits exceeded.
+        if abs(s.panda_joint1_q) > q_max[0]:
+            if debug:
+                print("Joint position 1 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 1 exceeded limits")
+        
+        if abs(s.panda_joint2_q) > q_max[1]:
+            if debug:
+                print("Joint position 2 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 2 exceeded limits")
+
+        if abs(s.panda_joint3_q) > q_max[2]:
+            if debug:
+                print("Joint position 3 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 3 exceeded limits")
+
+        if abs(s.panda_joint5_q) > q_max[4]:
+            if debug:
+                print("Joint position 5 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 5 exceeded limits")
+
+        if abs(s.panda_joint7_q) > q_max[6]:
+            if debug:
+                print("Joint position 7 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 7 exceeded limits")
+        
+        if s.panda_joint4_q < q_min[3] or s.panda_joint4_q > q_max[3]:
+            if debug:
+                print("Joint position 4 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 4 exceeded limits")
+
+        if s.panda_joint6_q < q_min[5] or s.panda_joint6_q > q_max[5]:
+            if debug:
+                print("Joint position 6 exceeded limits.")
+            return EventStatus.ReachedTermination(
+                   diagram,
+                   "Joint position 6 exceeded limits")
+        
+        # # Termination: Joint velocity limits exceeded.
+        # if abs(s.panda_joint1_w) > v_max[0]:
+        #     if debug:
+        #         print("Joint velocity 1 exceeded limits.")
+        #     return EventStatus.ReachedTermination(
+        #            diagram,
+        #            "Joint velocity 1 exceeded limits")
+
+        return EventStatus.Succeeded()
+
+    simulator.set_monitor(monitor)
