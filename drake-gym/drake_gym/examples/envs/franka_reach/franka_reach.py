@@ -88,7 +88,7 @@ def make_sim(generator,
     # Add assets to the plant.
     agent = AddAgent(plant)
     plant.Finalize()
-    plant.set_name("plant")
+    plant.set_name("plant_sim")
     panda_model_instance_compute = AddAgent(plant_compute)
     plant_compute.Finalize()
     plant_compute.set_name("plant_compute")
@@ -409,7 +409,7 @@ def make_sim(generator,
                    diagram,
                    "Joint position 6 exceeded limits")
         
-        # # Termination: Joint velocity limits exceeded.
+        # TODO: Termination: Joint velocity limits exceeded.
         # if abs(s.panda_joint1_w) > v_max[0]:
         #     if debug:
         #         print("Joint velocity 1 exceeded limits.")
@@ -420,3 +420,95 @@ def make_sim(generator,
         return EventStatus.Succeeded()
 
     simulator.set_monitor(monitor)
+
+
+def set_home(simulator, diagram_context, seed):
+    ''' An interface for domain randomization '''
+
+    # Joint limits for Franka Panda (from URDF, in radians)
+    q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
+    q_min = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
+    v_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]) # panda hardware limits
+    # u_up = np.array([87, 87, 87, 87, 12, 12, 12])
+
+    # randomize the q_init centred around some nominal home_position
+    q_home = [0.9207,  0.2574, -0.9527, -2.0683,  0.2799,  2.1147, 2.]
+    offset = 0.5 # rad 
+    home_positions = [
+        ('panda_joint1', np.random.uniform(low=q_home[0]-offset, high=q_home[0]+offset)),
+        ('panda_joint2', np.random.uniform(low=q_home[1]-offset, high=q_home[1]+offset)),
+        ('panda_joint3', np.random.uniform(low=q_home[2]-offset, high=q_home[2]+offset)),
+        ('panda_joint4', np.random.uniform(low=q_home[3]-offset, high=q_home[3]+offset)),
+        ('panda_joint5', np.random.uniform(low=q_home[4]-offset, high=q_home[4]+offset)),
+        ('panda_joint6', np.random.uniform(low=q_home[5]-offset, high=q_home[5]+offset)),
+        ('panda_joint7', np.random.uniform(low=q_home[6]-offset, high=q_home[6]+offset)),
+    ]
+
+    ''' No need to do this if TO always start from static. But there are benefits of doing it:
+        1. If your robot might:
+             -start an episode while already moving,
+             - be bumped or perturbed,
+             - have to reach again while not fully at rest,
+             - be commanded repeatedly during real use (back-to-back tasks),
+           then randomizing initial velocities helps dramatically.
+
+        2. SAC learns better if the state distribution is diverse.
+            If initial states are too narrow:
+              - the robot only learns to handle a very narrow part of the state space,
+              - the critic overfits,
+              - the policy becomes brittle,
+              - exploration collapses.
+            A bit of velocity randomization improves:
+              - value function generalization
+              - critic stability
+              - robustness to modeling errors
+
+        3. You want the global policy to work from ANY feasible state
+            If your goal-conditioned policy should handle:
+              - random resets,
+              - dynamic starts,
+              - states out of nominal manifold,
+            then randomizing q̇ is essential.
+
+        4. You want to imitate TO trajectories AND learn robustness
+             If TO always starts with q̇ = 0, but RL should be robust in deployment, your recipe is:
+              - BC from TO: train on trajectories starting at rest
+              - RL exploration: randomize q̇ in a safe range
+              - This helps you get TO-level optimality but also RL-level robustness.
+    '''
+    # randomize the v_init
+    home_velocities = [
+        ('panda_joint1', np.random.uniform(low=-0.1*v_max[0], high=0.1*v_max[0])),
+        ('panda_joint2', np.random.uniform(low=-0.1*v_max[1], high=0.1*v_max[1])),
+        ('panda_joint3', np.random.uniform(low=-0.1*v_max[2], high=0.1*v_max[2])),
+        ('panda_joint4', np.random.uniform(low=-0.1*v_max[3], high=0.1*v_max[3])),
+        ('panda_joint5', np.random.uniform(low=-0.1*v_max[4], high=0.1*v_max[4])),
+        ('panda_joint6', np.random.uniform(low=-0.1*v_max[5], high=0.1*v_max[5])),
+        ('panda_joint7', np.random.uniform(low=-0.1*v_max[6], high=0.1*v_max[6])),
+    ]
+
+    diagram = simulator.get_system()
+    plant = diagram.GetSubsystemByName("plant_sim")
+    plant_context = diagram.GetMutableSubsystemContext(plant, diagram_context)
+
+    # Clip the positions (I may not need this but for keeping generality)
+    for pair in home_positions:
+        joint = plant.GetJointByName(pair[0])
+        joint.set_angle(plant_context,
+                        np.clip(pair[1],
+                                joint.position_lower_limit(),
+                                joint.position_upper_limit()))
+    
+    # Randomize other params:
+    # e.g. friction, mass, link dimensions, gravity, etc.
+    # randomize mass 
+    objects_mass_offset = [
+        ("soup_base_link", np.random.uniform(low=-0.2, high=0.2))]
+    for pair in objects_mass_offset:
+        body = plant.GetBodyByName(pair[0])
+        # why creating a new default context here? so mass default is always the same?
+        mass = body.get_mass(plant.CreateDefaultContext()) 
+        body.SetMass(plant_context, mass+pair[1])
+
+def PandaReachEnv():
+    pass
