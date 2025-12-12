@@ -50,7 +50,7 @@ def MakeNamedViewVelocities(mbp,
                     f"{joint.name()}_{joint.velocity_suffix(i)}"
     for ind in mbp.GetFloatingBaseBodies():
         body = mbp.get_body(ind)
-        start = body.floating_velocities_start() - mbp.num_positions()
+        start = body.floating_velocities_start_in_v()
         for i in range(6):
             names[start
                   + i] = f"{body.name()}_{body.floating_velocity_suffix(i)}"

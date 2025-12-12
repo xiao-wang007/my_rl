@@ -1,10 +1,21 @@
+import os
+import sys
+# franka_reach.py -> franka_reach/ -> envs/ -> examples/
+_EXAMPLES_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, _EXAMPLES_DIR)
+# Also add drake-gym/ for drake_gym module
+_DRAKE_GYM_ROOT = os.path.dirname(os.path.dirname(_EXAMPLES_DIR))
+sys.path.insert(0, _DRAKE_GYM_ROOT)
+
 import gym
 import matplotlib.pyplot as plt
+
 from named_view_helpers import (
     MakeNamedViewActuation,
     MakeNamedViewPositions,
     MakeNamedViewState,
 )
+
 import numpy as np
 
 from pydrake.all import (
@@ -20,7 +31,7 @@ from pydrake.all import (
     ExternallyAppliedSpatialForce_,
     LeafSystem,
     MakeRenderEngineVtk,
-    MeshcatVisualizerCpp,
+    MeshcatVisualizer,
     MultibodyPlant,
     MultibodyPlantConfig,
     Multiplexer,
@@ -40,8 +51,11 @@ from pydrake.common.cpp_param import List
 from pydrake.common.value import Value
 from pydrake.systems.drawing import plot_graphviz, plot_system_graphviz
 
-from anzu.common.cc import FindAnzuResourceOrThrow
 from drake_gym.drake_gym import DrakeGymEnv
+
+# Get the path to the models directory
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
 
 # Gym parameters.
 sim_time_step = 0.01
@@ -56,9 +70,12 @@ contact_solver = drake_contact_solvers[0]
 
 def AddAgent(plant):
     parser = Parser(plant)
-    model_file = FindAnzuResourceOrThrow(
-        "drake_gym/models/franka_description/urdf/panda_arm.urdf")
-    agent = parser.AddModelFromFile(model_file)
+    model_file = os.path.join(_MODELS_DIR, "franka_description/urdf/panda_arm.urdf")
+    print(f"Loading model from: {model_file} \n")
+    agent = parser.AddModels(model_file)[0]
+    # Weld robot base to world (otherwise it's floating with 7 extra DOFs)
+    plant.WeldFrames(plant.world_frame(), 
+                     plant.GetFrameByName("panda_link0"))
     return agent
 
 
@@ -79,7 +96,7 @@ def make_sim(generator,
     multibody_plant_config = MultibodyPlantConfig(
         time_step=sim_time_step,
         contact_model=contact_model,
-        discrete_contact_solver=contact_solver,
+        discrete_contact_approximation=contact_solver,  # renamed in newer Drake
         )
 
     plant, scene_graph = AddMultibodyPlant(multibody_plant_config, builder)
@@ -89,24 +106,26 @@ def make_sim(generator,
     agent = AddAgent(plant)
     plant.Finalize()
     plant.set_name("plant_sim")
+    scene_graph.set_name("scene_graph_sim")
     panda_model_instance_compute = AddAgent(plant_compute)
     plant_compute.Finalize()
     plant_compute.set_name("plant_compute")
-    plant_compute_context = plant.CreateDefaultContext()
+    scene_graph_compute.set_name("scene_graph_compute")
+    plant_compute_context = plant_compute.CreateDefaultContext()
 
     # Add assets to the controller plant.
     controller_plant = MultibodyPlant(time_step=controller_time_step)
     AddAgent(controller_plant)
 
     if meshcat:
-        MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
+        MeshcatVisualizer.AddToBuilder(builder, scene_graph, meshcat)
 
     # Finalize the plant.
     controller_plant.Finalize()
     controller_plant.set_name("controller_plant")
 
     # Extract the controller plant information.
-    Ns = controller_plant.num_multibody_states()
+    Ns = controller_plant.num_multibody_states() # currently no underactuation
     Nv = controller_plant.num_velocities()
     Na = controller_plant.num_actuators()
     Nj = controller_plant.num_joints()
@@ -166,7 +185,7 @@ def make_sim(generator,
 
     ######################### Observer
     class observation_publisher(LeafSystem):
-        def __init(self, noise=False):
+        def __init__(self, noise=False):
             LeafSystem.__init__(self)
             self.Ns = plant.num_multibody_states()
             self.DeclareVectorInputPort("plant_states", self.Ns)
@@ -202,7 +221,8 @@ def make_sim(generator,
         
     reward = builder.AddSystem(RewardSystem())
     builder.Connect(plant.get_state_output_port(), reward.get_input_port(0))
-    builder.ExportOutput(reward.get_output_port(), "reward")
+    builder.ExportOutput(reward.GetOutputPort("reward"), "reward")
+    builder.ExportOutput(reward.GetOutputPort("safety_reward"), "safety_reward")
 
     if monitoring_camera:
         # add an overhead camera for video logging of rollout evaluations
@@ -252,7 +272,7 @@ def make_sim(generator,
                                       event=PublishEvent(
                                       callback=self._on_per_step))
             self.plant = plant
-            self.ee_body = self.plant.GetBodyByName("ee_link") # adapt to my ee link
+            self.ee_body = self.plant.GetBodyByName("panda_link8") # adapt to my ee link
             self.F = SpatialForce(tau=[0., 0., 0.,],
                                   f=[0., 0., 0.])
             self.force_mag = force_mag                        
@@ -288,8 +308,9 @@ def make_sim(generator,
     # Episode end conditions:
     def monitor(context, state_view=StateView):
         plant_context = plant.GetMyContextFromRoot(context)
-        state = plant.GetOutputPort("continuous_state").Eval(plant_context)
+        state = plant.GetOutputPort("panda_state").Eval(plant_context)
         s = state_view(state)
+        print(f"\n s = {s} \n")
 
         ''' Truncation: the episode duration reaches the time limit. 
             Need this for finite horizon and stable learning '''
@@ -302,12 +323,16 @@ def make_sim(generator,
 
         ''' Define termination by goal or safety constraints violation '''
         # for franka-reaching, defined distance-to-goal
+        qs = [s.panda_joint1_q, s.panda_joint2_q, s.panda_joint3_q, 
+              s.panda_joint4_q, s.panda_joint5_q, s.panda_joint6_q, s.panda_joint7_q]
+        print(f"num_positions: {plant_compute.num_positions()}")
         plant_compute.SetPositions(plant_compute_context,
-                                   s.panda_joint_q)
+                                   qs)
+
         # TODO: change to "dummy1" later after welding finger to ee_link                    
         ee_frame = plant_compute.GetFrameByName("panda_link8")
         base_frame = plant_compute.GetFrameByName("panda_link0")
-        X_base_ee = plant_compute.CalcPose(plant_compute_context, base_frame, ee_frame)
+        X_base_ee = ee_frame.CalcPose(plant_compute_context, base_frame)
         p_ee_base = X_base_ee.translation()
         rot_ee_base = X_base_ee.rotation().ToQuaternion()
 
@@ -343,7 +368,7 @@ def make_sim(generator,
             # For small errors: error ≈ 2 * [x_e, y_e, z_e]
             return 2.0 * np.array([x_e, y_e, z_e])
 
-        ori_error = quat_error(np.array(rot_ee_goal_base),
+        ori_error = quat_error(rot_ee_goal_base.wxyz(),
                                rot_ee_base.wxyz())
         angle_error = np.linalg.norm(ori_error)
         if angle_error < 0.2:  # within 0.2 rads in axis-angle angle error
@@ -420,6 +445,8 @@ def make_sim(generator,
         return EventStatus.Succeeded()
 
     simulator.set_monitor(monitor)
+    
+    return simulator
 
 
 def set_home(simulator, diagram_context, seed):
@@ -434,15 +461,15 @@ def set_home(simulator, diagram_context, seed):
     # randomize the q_init centred around some nominal home_position
     q_home = [0.9207,  0.2574, -0.9527, -2.0683,  0.2799,  2.1147, 2.]
     offset = 0.5 # rad 
-    home_positions = [
-        ('panda_joint1', np.random.uniform(low=q_home[0]-offset, high=q_home[0]+offset)),
-        ('panda_joint2', np.random.uniform(low=q_home[1]-offset, high=q_home[1]+offset)),
-        ('panda_joint3', np.random.uniform(low=q_home[2]-offset, high=q_home[2]+offset)),
-        ('panda_joint4', np.random.uniform(low=q_home[3]-offset, high=q_home[3]+offset)),
-        ('panda_joint5', np.random.uniform(low=q_home[4]-offset, high=q_home[4]+offset)),
-        ('panda_joint6', np.random.uniform(low=q_home[5]-offset, high=q_home[5]+offset)),
-        ('panda_joint7', np.random.uniform(low=q_home[6]-offset, high=q_home[6]+offset)),
-    ]
+    home_positions = {
+        'panda_joint1' : np.random.uniform(low=q_home[0]-offset, high=q_home[0]+offset),
+        'panda_joint2' : np.random.uniform(low=q_home[1]-offset, high=q_home[1]+offset),
+        'panda_joint3' : np.random.uniform(low=q_home[2]-offset, high=q_home[2]+offset),
+        'panda_joint4' : np.random.uniform(low=q_home[3]-offset, high=q_home[3]+offset),
+        'panda_joint5' : np.random.uniform(low=q_home[4]-offset, high=q_home[4]+offset),
+        'panda_joint6' : np.random.uniform(low=q_home[5]-offset, high=q_home[5]+offset),
+        'panda_joint7' : np.random.uniform(low=q_home[6]-offset, high=q_home[6]+offset),
+    }
 
     ''' No need to do this if TO always start from static. But there are benefits of doing it:
         1. If your robot might:
@@ -477,38 +504,103 @@ def set_home(simulator, diagram_context, seed):
               - This helps you get TO-level optimality but also RL-level robustness.
     '''
     # randomize the v_init
-    home_velocities = [
-        ('panda_joint1', np.random.uniform(low=-0.1*v_max[0], high=0.1*v_max[0])),
-        ('panda_joint2', np.random.uniform(low=-0.1*v_max[1], high=0.1*v_max[1])),
-        ('panda_joint3', np.random.uniform(low=-0.1*v_max[2], high=0.1*v_max[2])),
-        ('panda_joint4', np.random.uniform(low=-0.1*v_max[3], high=0.1*v_max[3])),
-        ('panda_joint5', np.random.uniform(low=-0.1*v_max[4], high=0.1*v_max[4])),
-        ('panda_joint6', np.random.uniform(low=-0.1*v_max[5], high=0.1*v_max[5])),
-        ('panda_joint7', np.random.uniform(low=-0.1*v_max[6], high=0.1*v_max[6])),
-    ]
+    home_velocities = {
+        'panda_joint1' : np.random.uniform(low=-0.1*v_max[0], high=0.1*v_max[0]),
+        'panda_joint2' : np.random.uniform(low=-0.1*v_max[1], high=0.1*v_max[1]),
+        'panda_joint3' : np.random.uniform(low=-0.1*v_max[2], high=0.1*v_max[2]),
+        'panda_joint4' : np.random.uniform(low=-0.1*v_max[3], high=0.1*v_max[3]),
+        'panda_joint5' : np.random.uniform(low=-0.1*v_max[4], high=0.1*v_max[4]),
+        'panda_joint6' : np.random.uniform(low=-0.1*v_max[5], high=0.1*v_max[5]),
+        'panda_joint7' : np.random.uniform(low=-0.1*v_max[6], high=0.1*v_max[6]),
+    }
 
     diagram = simulator.get_system()
     plant = diagram.GetSubsystemByName("plant_sim")
     plant_context = diagram.GetMutableSubsystemContext(plant, diagram_context)
 
     # Clip the positions (I may not need this but for keeping generality)
-    for pair in home_positions:
-        joint = plant.GetJointByName(pair[0])
+    for joint_name, q in home_positions.items():
+        joint = plant.GetJointByName(joint_name)
         joint.set_angle(plant_context,
-                        np.clip(pair[1],
+                        np.clip(q,
                                 joint.position_lower_limit(),
                                 joint.position_upper_limit()))
     
     # Randomize other params:
     # e.g. friction, mass, link dimensions, gravity, etc.
     # randomize mass 
-    objects_mass_offset = [
-        ("soup_base_link", np.random.uniform(low=-0.2, high=0.2))]
-    for pair in objects_mass_offset:
-        body = plant.GetBodyByName(pair[0])
-        # why creating a new default context here? so mass default is always the same?
-        mass = body.get_mass(plant.CreateDefaultContext()) 
-        body.SetMass(plant_context, mass+pair[1])
+    # objects_mass_offset = {
+    #     "soup_base_link": np.random.uniform(low=-0.2, high=0.2)
+    #     }
+    # for link_name, mass_offset in objects_mass_offset.items():
+    #     body = plant.GetBodyByName(link_name)
+    #     # why creating a new default context here? so mass default is always the same?
+    #     mass = body.get_mass(plant.CreateDefaultContext()) 
+    #     body.SetMass(plant_context, mass+mass_offset)
 
-def PandaReachEnv():
-    pass
+
+def PandaReachEnv(observations="state",
+                  meshcat=None,
+                  time_limit=gym_time_limit,
+                  debug=False,
+                  obs_noise=False,
+                  monitoring_camera=False,
+                  add_disturbances=False):
+    
+    # make simulation
+    simulator = make_sim(generator=RandomGenerator(),
+                         meshcat=meshcat,
+                         time_limit=time_limit,
+                         debug=debug,
+                         obs_noise=obs_noise,
+                         monitoring_camera=monitoring_camera,
+                         add_disturbances=add_disturbances)
+    
+    plant_sim = simulator.get_system().GetSubsystemByName("plant_sim")
+
+    # Define action space
+    Na = 7 # currently, only joint velocities as actions
+    low_a  = plant_sim.GetVelocityLowerLimits()[:Na]  # velocity limits are typically symmetric
+    high_a = plant_sim.GetVelocityUpperLimits()[:Na]
+    action_space = gym.spaces.Box(low=np.array(low_a, dtype="float64"),
+                                  high=np.array(high_a, dtype="float64"),
+                                  dtype=np.float64)
+                        
+    # Define observation space
+    low = np.concatenate(
+        (plant_sim.GetPositionLowerLimits(), plant_sim.GetVelocityLowerLimits()))
+    high = np.concatenate(
+        (plant_sim.GetPositionUpperLimits(), plant_sim.GetVelocityUpperLimits()))
+    observation_space = gym.spaces.Box(low=np.asarray(low, dtype="float64"),
+                                       high=np.asarray(high, dtype="float64"),
+                                       dtype=np.float64)
+    
+    env = DrakeGymEnv(
+        simulator=simulator,
+        time_step=gym_time_step,
+        action_space=action_space,
+        observation_space=observation_space,
+        reward="reward", # will change later as I progress
+        action_port_id="actions_jnt_vel", # will change later as I progress
+        observation_port_id="observations_jnt_states",
+        set_home=set_home,
+        render_rgb_port_id="camera1_stream" if monitoring_camera else None)
+    
+    # Expose parameters that could be useful for learning
+    env.time_step = gym_time_step
+    env.sim_time_step = sim_time_step
+
+    return env
+
+if __name__ == "__main__":
+    env = PandaReachEnv(debug=True,
+                        obs_noise=True,
+                        monitoring_camera=True,
+                        add_disturbances=True)
+    obs = env.reset()
+    done = False
+    while not done:
+        action = env.action_space.sample()
+        obs, reward, done, info = env.step(action)
+        print(f"obs: {obs}, reward: {reward}, done: {done}")
+    env.close()
