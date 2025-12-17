@@ -26,6 +26,15 @@ info = Dict[str, Any]
 
 ''' Wrap drake gym inside tianshou interface '''
 class MyEnv(gym.Env):
+    def __init__(self):
+            super().__init__()
+            self.env = PandaReachEnv(debug=True,
+                                     obs_noise=True,
+                                     monitoring_camera=True,
+                                     add_disturbances=True)
+            self.observation_space = self.env.observation_space
+            self.action_space = self.env.action_space
+
     def reset(self, seed=None, options=None) -> Tuple[observation, info]:
         """Reset environment to initial state."""
         pass
