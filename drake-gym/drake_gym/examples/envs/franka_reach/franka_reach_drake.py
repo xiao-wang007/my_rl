@@ -189,20 +189,52 @@ def make_sim(generator,
             LeafSystem.__init__(self)
             self.Ns = plant.num_multibody_states()
             self.DeclareVectorInputPort("plant_states", self.Ns)
-            self.DeclareVectorOutputPort("observations", self.Ns, self.CalcObs)
-            self.noise = noise 
+            self.DeclareVectorOutputPort("panda_joint_obs", self.Ns, self.CalcObs1)
+            self.DeclareVectorOutputPort("ee_pose_obs", 7, self.CalcObs2)  # pos(3) + quat(4)
+            self.DeclareVectorOutputPort("ee_pose_goal", 7, self.CalcObsGoal)
+            self.noise = noise
+            
+            # Cache frame references
+            self.ee_frame = plant.GetFrameByName("panda_link8")
+            self.base_frame = plant.world_frame()
 
-        def CalcObs(self, context, output):
+        def CalcObs1(self, context, output):
             plant_state = self.get_input_port(0).Eval(context)
             if self.noise:
                 plant_state += np.random.uniform(low=-0.01, high=0.01, size=self.Ns)
-        
             output.SetFromVector(plant_state)
+        
+        def CalcObs2(self, context, output):
+            # Get plant state and set positions in plant context
+            plant_state = self.get_input_port(0).Eval(context)
+            q = plant_state[:plant.num_positions()]
+            
+            # Use the plant_compute for FK calculations
+            plant_compute.SetPositions(plant_compute_context, q)
+            X_WE = plant_compute.CalcRelativeTransform(
+                plant_compute_context,
+                plant_compute.world_frame(),
+                plant_compute.GetFrameByName("panda_link8"))
+            
+            # Extract position and quaternion
+            pos = X_WE.translation()
+            quat = X_WE.rotation().ToQuaternion().wxyz()  # [w, x, y, z]
+            
+            ee_pose = np.concatenate([pos, quat])
+            if self.noise:
+                ee_pose[:3] += np.random.uniform(low=-0.005, high=0.005, size=3)
+            output.SetFromVector(ee_pose)
+
+        def CalcObsGoal(self, context, output):
+            goal = np.array(p_ee_goal_base + rot_ee_goal_base.wxyz())
+            output.SetFromVector(goal)
         
     obs_pub = builder.AddSystem(observation_publisher(noise=obs_noise))
 
     builder.Connect(plant.get_state_output_port(), obs_pub.get_input_port(0))
     builder.ExportOutput(obs_pub.get_output_port(0), "observations_jnt_states")
+    builder.ExportOutput(obs_pub.get_output_port(1), "observations_ee_pose")
+    builder.ExportOutput(obs_pub.get_output_port(2), "goal_ee_pose")
 
     class RewardSystem(LeafSystem):
         def __init__(self):
