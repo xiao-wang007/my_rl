@@ -6,10 +6,6 @@ from franka_reach_drake import PandaReachEnv
 
 from tianshou.env import *
 
-env = PandaReachEnv(debug=True,
-                    obs_noise=True,
-                    monitoring_camera=True,
-                    add_disturbances=True)
 # obs = env.reset()
 # done = False
 # while not done:
@@ -25,7 +21,7 @@ truncated = bool
 info = Dict[str, Any]
 
 ''' Wrap drake gym inside tianshou interface '''
-class MyEnv(gym.Env):
+class FrankaReach_ts(gym.Env):
     def __init__(self):
             super().__init__()
             self.env = PandaReachEnv(debug=True,
@@ -37,24 +33,37 @@ class MyEnv(gym.Env):
 
     def reset(self, seed=None, options=None) -> Tuple[observation, info]:
         """Reset environment to initial state."""
-        pass
+        return self.env.reset(seed=seed, return_info=True, options=options)
+        
     
     def step(self, action) -> Tuple[observation, reward, terminated, truncated, info]:
         """Execute one step in the environment."""
-        pass
+        return self.env.step(action)
     
     def seed(self, seed: int) -> List[int]:
         """Set random seed."""
-        pass
+        np.random.seed(seed)
+        return self.env.seed(seed) 
     
     def render(self, mode='human') -> Any:
         """Render the environment."""
-        pass
+        return self.env.render(mode=mode)
     
     def close(self) -> None:
         """Clean up resources."""
-        pass
+        return self.env.close()
     
-    # Required spaces
-    observation_space: gym.Space
-    action_space: gym.Space
+    # # Required spaces
+    # observation_space: gym.Space
+    # action_space: gym.Space
+
+if __name__ == "__main__":
+    env = FrankaReach_ts()
+    obs = env.reset()
+    done = False
+    while not done:
+        action = env.action_space.sample()
+        obs, reward, terminated, truncated, info = env.step(action)
+        done = terminated or truncated
+        print(f"obs: {obs}, reward: {reward}, done: {done}")
+    env.close()

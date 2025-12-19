@@ -232,7 +232,7 @@ class DrakeGymEnv(gym.Env):
         # when gym is next upgraded it will begin to generate warnings.  At
         # that time replace `(terminated or truncated)`
         # with `terminated, truncated`.
-        return observation, reward, (terminated or truncated), info
+        return observation, reward, terminated, truncated, info
 
     def reset(self, *,
               seed: Optional[int] = None,
