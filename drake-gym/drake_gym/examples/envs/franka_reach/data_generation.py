@@ -6,7 +6,9 @@ data is in this form:
 [state_t, action_t, nextState_t, reward_t, done_t] for RL
 
 [---------state_t/observation----------, -action_t-] for BC
-[(q_t, v_t, ee_xyz_t, ee_rot6d_t, goal), (q_t, v_t)]
+[(q_t, v_t, ee_xyz_t, ee_rot6d_t, goal, phi), (q_t, v_t)] # phi for timing variable, at 0.5T ee should
+reach the target pose at desired v_ee, at T should be at rest at a target pose. Use this link as a 
+reference: https://chatgpt.com/s/t_694c776e7ab48191b655b8455fd856a0
 
 Data generation module:
     Input: q_init, v_init, ee_pose_SE3_target, v_ee_target
