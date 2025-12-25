@@ -6,9 +6,9 @@ data is in this form:
 [state_t, action_t, nextState_t, reward_t, done_t] for RL
 
 [---------state_t/observation----------, -action_t-] for BC
-[(q_t, v_t, ee_xyz_t, ee_rot6d_t, goal, phi), (q_t, v_t)] # phi for timing variable, at 0.5T ee should
-reach the target pose at desired v_ee, at T should be at rest at a target pose. Use this link as a 
-reference: https://chatgpt.com/s/t_694c776e7ab48191b655b8455fd856a0
+[(q_t, v_t, ee_xyz_t, ee_rot6d_t, goal, phi_strike, time_since_contact, contact_flag), (q_t, v_t)] 
+phi for timing variable, at 0.5T ee should reach the target pose at desired v_ee, at T should be 
+at rest at a target pose. Use this link as a reference: https://chatgpt.com/s/t_694c776e7ab48191b655b8455fd856a0
 
 Data generation module:
     Input: q_init, v_init, ee_pose_SE3_target, v_ee_target
@@ -41,6 +41,10 @@ Then use h5py in the pipeline to store the data into hdf5 files.
     - IQL
 
 # TODO: the recommanded implementation: https://chatgpt.com/s/t_694c8270985c8191955f29b4d4da4540
+    - the timing variable phi(t): https://chatgpt.com/s/t_694d3fd069308191bb35bde1810654a2
+    - how to use phi(t) in RL rewards: https://chatgpt.com/s/t_694d4005c50c8191a094d748cac534e7
+    - why a contact_flag in the observation is useful: https://chatgpt.com/s/t_694d48f360688191a72cf8068928541c
+    - use both raw TO data and tracked sim data for collection: https://chatgpt.com/s/t_694d4b9a2b588191ab415dd62b68702d
 
 The best algorithm is the one whose inductive bias matches your problem.
 """
@@ -56,9 +60,10 @@ nv = 7
 nu = 7
 
 class DataGenerator():
-    def __init__(self, T, N, q_init, ee_target_SE3, v_ee, v_init=np.zeros(nv)):
+    def __init__(self, T, N, q_init, ee_target_SE3, v_ee, v_init=np.zeros(nv), split_ratio=0.5):
         self.T = T
         self.N = N
+        self.t_index_strike = int(split_ratio * N)  
         self.dt = T / (N - 1)
         self.q_init = q_init
         self.v_init = v_init
@@ -67,6 +72,9 @@ class DataGenerator():
         self.data_typeA = None
         self.data_typeB = None
         self.prog = None
+
+        # this comes from sim or some contact detection in real robot
+        self.t_index_detected_contact = None
 
         # build the plant here
         self.builder = DiagramBuilder()
@@ -90,6 +98,27 @@ class DataGenerator():
     def _extract_solution(self):
         pass
     
+    def _get_contact_time_index(self) -> int:
+        pass
+
+    def _compute_phi_and_timeRemain(self, t_index: int) -> float:
+        ''' Compute the phase variable phi(t) with a bound [0, 1] using smooth Gaussian kernel 
+            to produce weighting function over time. '''
+        # phi is indexing relative to the whole horizon
+        phi = t_index / (self.N - 1)
+        phi = np.clip(phi, 0.0, 1.0)
+
+        # phi_hit is indexing relative to the contact time as per split ratio
+        phi_hit = (t_index - self.t_index_strike) / (self.N - 1)
+
+        # time since contact
+        if self.t_index_detected_contact:
+            time_since_contact = (t_index - self.t_index_detected_contact) * self.dt
+        else:
+            time_since_contact = 0.0
+
+        return phi, phi_hit, time_since_contact
+
     def _build_data(self):
         pass
     
