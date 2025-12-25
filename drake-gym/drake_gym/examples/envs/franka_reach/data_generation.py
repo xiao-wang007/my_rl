@@ -22,6 +22,27 @@ Option B:
             done_t] (OPTIONAL)
 
 Then use h5py in the pipeline to store the data into hdf5 files.
+
+# TODO:
+# TO + BC + residual-RL strategy with shape/contact adaptiveness: https://chatgpt.com/s/t_694c7a0a9cc48191a0d52c810d162f7e
+  TO + BC as motion prior
+  RL as improvement for robustness and adaptiveness
+
+# online system ID to bridge sim2real gap: https://chatgpt.com/s/t_694c7cd279ec819196d87624fecdeb08
+
+# vanilla SAC is not ideal for my case, here is why: https://chatgpt.com/s/t_694c80173aa481918312d181bdbe3820
+  in which it suggests that RL should output: velocity scale factor, or an impulse modulation gain, 
+  or small residual near contact only; instead of full joint targets.
+
+# Better options than vanilla SAC: 
+    - TD3 + BC: works well with tiny dataset
+    - SAC+BC / SACfD
+    - AWAC
+    - IQL
+
+# TODO: the recommanded implementation: https://chatgpt.com/s/t_694c8270985c8191955f29b4d4da4540
+
+The best algorithm is the one whose inductive bias matches your problem.
 """
 
 import numpy as np
