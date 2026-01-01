@@ -45,6 +45,9 @@ Then use h5py in the pipeline to store the data into hdf5 files.
     - how to use phi(t) in RL rewards: https://chatgpt.com/s/t_694d4005c50c8191a094d748cac534e7
     - why a contact_flag in the observation is useful: https://chatgpt.com/s/t_694d48f360688191a72cf8068928541c
     - use both raw TO data and tracked sim data for collection: https://chatgpt.com/s/t_694d4b9a2b588191ab415dd62b68702d
+    - only do online fine-tuning with RL after thoroughly debugged offline RL and there is a demand: 
+        https://chatgpt.com/s/t_695464499a788191814c3f2f7ad63801
+    - the 'exploration' in RL means differently in my case: https://chatgpt.com/s/t_695469db9c1c8191b7b314ede9f47d48
 
 The best algorithm is the one whose inductive bias matches your problem.
 """
