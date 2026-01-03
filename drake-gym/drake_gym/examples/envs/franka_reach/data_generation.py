@@ -57,10 +57,123 @@ from pydrake.all import (DiagramBuilder)
 from constraints import *
 from utils import MakeArmOnlyPlant
 
-
 nq = 7
 nv = 7
 nu = 7
+
+def build_prog(prog, N, ):
+
+    q_arm_vars = prog.NewContinuousVariables(N, 7, "joint_pos")
+    v_arm_vars = prog.NewContinuousVariables(N, 7, "joint_vel")
+    u_vars = prog.NewContinuousVariables(N, 7, "tau")
+    ln_vars = prog.NewContinuousVariables(1, "lambda_N")
+    lt_var = prog.NewContinuousVariables(1, "lambda_t")
+
+    v1_post_vars = prog.NewContinuousVariables(2, "obj1_v_post")
+    w1_post_vars = prog.NewContinuousVariables(1, "obj1_w_post")
+
+    ds_var = prog.NewContinuousVariables(1, "ds")
+    dtheta_var = prog.NewContinuousVariables(1, "dtheta")
+
+    h_vars = prog.NewContinuousVariables(N-1, "time step" )
+
+    dtheta_abs_var = prog.NewContinuousVariables(1, "dtheta_abs")
+    # enforce the sign of dtheta
+    prog.AddLinearConstraint(dtheta_abs_var[0] >= dtheta_var[0])
+    prog.AddLinearConstraint(dtheta_abs_var[0] >= -dtheta_var[0])
+    prog.AddBoundingBoxConstraint(0, np.inf, dtheta_abs_var)
+
+    # panda joint limits
+    q_robot_up = np.array([2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973])
+    q_robot_low = np.array([-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973])
+    v_robot_up = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]) # panda hardware limits
+    v_robot_low = -v_robot_up
+    u_up = np.array([87, 87, 87, 87, 12, 12, 12])
+    u_low = -u_up
+
+    # dtau
+    dtau_up = np.array([[dtau_scalar]]*7)
+    dtau_low = -dtau_up
+
+    # bounds for segment 1
+    prog.AddBoundingBoxConstraint(np.array([q_robot_low]*(t_impact-1)), 
+                                np.array([q_robot_up]*(t_impact-1)), 
+                                q_arm_vars[1:t_impact, :])
+
+    prog.AddBoundingBoxConstraint(np.array([v_robot_low]*(t_impact-1)),
+                                np.array([v_robot_up]*(t_impact-1)), 
+                                v_arm_vars[1:t_impact, :])
+
+    prog.AddBoundingBoxConstraint(np.array([u_low]*(t_impact-1)), 
+                                np.array([u_up]*(t_impact-1)),
+                                u_vars[1:t_impact, :])
+
+    # bounds for segment 3
+    prog.AddBoundingBoxConstraint(np.array([q_robot_low]*(N-t_impact-1)), 
+                                np.array([q_robot_up]*(N-t_impact-1)), 
+                                q_arm_vars[t_impact+1:, :])
+
+    prog.AddBoundingBoxConstraint(np.array([v_robot_low]*(N-t_impact-1)),
+                                np.array([v_robot_up]*(N-t_impact-1)), 
+                                v_arm_vars[t_impact+1:, :])
+
+    prog.AddBoundingBoxConstraint(np.array([u_low]*(N-t_impact-1)), 
+                                np.array([u_up]*(N-t_impact-1)),
+                                u_vars[t_impact+1:, :])
+
+    fn_low = 0.
+    fn_up = 50.
+    prog.AddBoundingBoxConstraint(fn_low,
+                                fn_up,
+                                ln_vars)
+
+    ft_low = -0.5*fn_up
+    # ft_low = -3.0
+    # ft_low = 1.0
+    ft_up = 0.5*fn_up
+    # ft_up = -1.0
+    # ft_up = 5.0
+    prog.AddBoundingBoxConstraint(ft_low,
+                                ft_up,
+                                lt_var)
+                                
+    h_low = np.array([h_scalar_low]*(N-1))
+    h_high = np.array([h_scalar_high]*(N-1))
+    prog.AddBoundingBoxConstraint(h_low, h_high, h_vars)
+
+    # ds and dtheta bounds
+    prog.AddBoundingBoxConstraint(-2*3.14, 2*3.14, dtheta_var)
+    # prog.AddBoundingBoxConstraint(-10., 10., w1_post_vars)
+
+    if vhat[0] > 0:
+        prog.AddBoundingBoxConstraint(0., 5., v1_post_vars[0])
+    if vhat[1] > 0:
+        prog.AddBoundingBoxConstraint(0., 5., v1_post_vars[1])
+    if vhat[0] < 0:
+        prog.AddBoundingBoxConstraint(-5., 0., v1_post_vars[0])
+    if vhat[1] < 0:
+        prog.AddBoundingBoxConstraint(-5., 0., v1_post_vars[1])
+
+    # prog.AddBoundingBoxConstraint(-5., 0., v1_post_vars[0])
+    # prog.AddBoundingBoxConstraint(0., 5., v1_post_vars[1])
+
+    # arm init and end
+    q0_arm = start_pose_panda
+    v0_arm = np.zeros(7)
+    vf_arm = np.zeros(nu)
+
+    ## fix init
+    prog.AddBoundingBoxConstraint(q0_arm, q0_arm, q_arm_vars[0, :])
+    # prog.AddBoundingBoxConstraint(end_pose_panda, end_pose_panda, q_arm_vars[-1, :])
+    prog.AddBoundingBoxConstraint(v0_arm, v0_arm, v_arm_vars[0, :])
+    prog.AddBoundingBoxConstraint(vf_arm, vf_arm, v_arm_vars[-1, :])
+
+    # fix u0, which is just tau_g to hold the arm up there
+    plant_double.SetPositionsAndVelocities(double_context, np.concatenate((q0_arm, np.zeros(7)))) # using the arm-only plant
+    u0 = plant_double.CalcGravityGeneralizedForces(double_context)
+    prog.AddBoundingBoxConstraint(u0, u0, u_vars[0, :])
+
+
 
 class DataGenerator():
     def __init__(self, T, N, q_init, ee_target_SE3, v_ee, v_init=np.zeros(nv), split_ratio=0.5):
@@ -99,6 +212,9 @@ class DataGenerator():
         pass
 
     def _extract_solution(self):
+        pass
+
+    def _close_loop_tracking(self):
         pass
     
     def _get_contact_time_index(self) -> int:
