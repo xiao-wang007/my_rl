@@ -57,6 +57,12 @@ from drake_gym.drake_gym import DrakeGymEnv
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
 
+# register the env to gym
+gym.envs.register(
+    id="BoxFlipUp-v0",
+    entry_point=("manipulation.envs.box_flipup:BoxFlipUpEnv"), # need to modify this later to point to my env
+)
+
 # Gym parameters.
 sim_time_step = 0.01
 gym_time_step = 0.05
