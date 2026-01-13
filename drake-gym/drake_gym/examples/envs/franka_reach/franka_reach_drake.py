@@ -60,7 +60,7 @@ _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
 # register the env to gym
 gym.envs.register(
     id="BoxFlipUp-v0",
-    entry_point=("manipulation.envs.box_flipup:BoxFlipUpEnv"), # need to modify this later to point to my env
+    entry_point=("envs.franka_reach.franka_reach_drake:PandaReachEnv"), # need to modify this later to point to my env
 )
 
 # Gym parameters.
@@ -348,7 +348,14 @@ def make_sim(generator,
         plant_context = plant.GetMyContextFromRoot(context)
         state = plant.GetOutputPort("panda_state").Eval(plant_context)
         s = state_view(state)
-        print(f"\n s = {s} \n")
+        # print(f"\n s = {s} \n")
+
+        # print cleanly
+        t = context.get_time()
+        qs = [round(getattr(s, f"panda_joint{i}_q").item(), 3) for i in range(1, 8)]
+        vs = [round(getattr(s, f"panda_joint{i}_w").item(), 3) for i in range(1, 8)]
+        print(f"state at time {t:.2f} s: \n qs = {qs}  \
+                                         \n vs = {vs} \n")
 
         ''' Truncation: the episode duration reaches the time limit. 
             Need this for finite horizon and stable learning '''
@@ -363,7 +370,6 @@ def make_sim(generator,
         # for franka-reaching, defined distance-to-goal
         qs = [s.panda_joint1_q, s.panda_joint2_q, s.panda_joint3_q, 
               s.panda_joint4_q, s.panda_joint5_q, s.panda_joint6_q, s.panda_joint7_q]
-        print(f"num_positions: {plant_compute.num_positions()}")
         plant_compute.SetPositions(plant_compute_context,
                                    qs)
 
@@ -636,9 +642,12 @@ if __name__ == "__main__":
                         monitoring_camera=True,
                         add_disturbances=True)
     obs = env.reset()
-    done = False
-    while not done:
+    # done = False
+    terminated = False
+    truncated = False
+    while not terminated and not truncated:
         action = env.action_space.sample()
-        obs, reward, done, info = env.step(action)
-        print(f"obs: {obs}, reward: {reward}, done: {done}")
+        obs, reward, terminated, truncated, info = env.step(action)
+
+        print(f"obs: {obs}, reward: {reward}, terminated: {terminated}, truncated: {truncated}")
     env.close()
