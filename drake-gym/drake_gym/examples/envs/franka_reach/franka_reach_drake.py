@@ -246,19 +246,42 @@ def make_sim(generator,
     builder.ExportOutput(obs_pub.get_output_port(2), "goal_ee_pose")
 
     class RewardSystem(LeafSystem):
-        def __init__(self):
+        def __init__(self, Ns, 
+                     plant_compute, plant_compute_context, composite_reward):
             LeafSystem.__init__(self)
+            self.plant = plant_compute
+            self.plant_context = plant_compute_context
+            self.composite_reward = composite_reward
+
             self.DeclareVectorInputPort("state", Ns)
             self.DeclareVectorOutputPort("reward", 1, self.CalcReward)
-            self.DeclareVectorOutputPort("safety_reward", 1, self.CalcSafetyReward)
+            # self.DeclareVectorOutputPort("safety_reward", 1, self.CalcSafetyReward)
         
         def CalcReward(self, context, output):
-            reward = 1
-            output[0] = reward
+            # reward = 1
+
+            # call my custom reward functions here
+            state = self.get_input_port(0).Eval(context)
+
+            ''' setting the plant to the state once per step for efficiency,
+                can do this for each individual reward functions if needed '''
+            # set positions in plant context
+            qs = state[:self.plant.num_positions()]
+            self.plant.SetPositions(self.plant_context, qs)
+
+            # I may need to set v or others as well, depending on the reward functions
+
+            total, _ = self.composite_reward(
+                state=state,
+                plant=self.plant,
+                plant_context=self.plant_context,
+            )
+
+            output[0] = total
         
-        def CalcSafetyReward(self, context, output):
-            # adapt task constraints here
-            pass 
+        # def CalcSafetyReward(self, context, output):
+        #     # adapt task constraints here
+        #     pass 
         
     reward = builder.AddSystem(RewardSystem())
     builder.Connect(plant.get_state_output_port(), reward.get_input_port(0))
@@ -582,6 +605,11 @@ def set_home(simulator, diagram_context, seed):
     #     # why creating a new default context here? so mass default is always the same?
     #     mass = body.get_mass(plant.CreateDefaultContext()) 
     #     body.SetMass(plant_context, mass+mass_offset)
+
+    ''' #TODO: randomize the target of ee using FK here; 
+        To think: does manipulability matter here? it should be used to
+        quantify how well the robot can reach certain poses? could be useful'''
+
 
 
 def PandaReachEnv(observations="state",
