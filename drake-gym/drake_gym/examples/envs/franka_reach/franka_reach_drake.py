@@ -46,6 +46,7 @@ from pydrake.all import (
     RollPitchYaw,
     Simulator,
     SpatialForce,
+    StartMeshcat,
 )
 from pydrake.common.cpp_param import List
 from pydrake.common.value import Value
@@ -65,7 +66,9 @@ gym.envs.register(
 
 # Gym parameters.
 sim_time_step = 0.01
-gym_time_step = 0.05
+gym_time_step = 0.1
+# sim_time_step = 0.001
+# gym_time_step = 0.01
 controller_time_step = 0.01
 gym_time_limit = 5
 drake_contact_models = ['point', 'hydroelastic_with_fallback']
@@ -368,8 +371,6 @@ def make_sim(generator,
 
         ''' Define termination by goal or safety constraints violation '''
         # for franka-reaching, defined distance-to-goal
-        qs = [s.panda_joint1_q, s.panda_joint2_q, s.panda_joint3_q, 
-              s.panda_joint4_q, s.panda_joint5_q, s.panda_joint6_q, s.panda_joint7_q]
         plant_compute.SetPositions(plant_compute_context,
                                    qs)
 
@@ -637,17 +638,26 @@ def PandaReachEnv(observations="state",
     return env
 
 if __name__ == "__main__":
-    env = PandaReachEnv(debug=True,
+    meshcat = StartMeshcat()
+    env = PandaReachEnv(meshcat=meshcat,
+                        debug=True,
                         obs_noise=True,
                         monitoring_camera=True,
                         add_disturbances=True)
+
+    input("Open Meshcat URL in browser, then press Enter...")
+
     obs = env.reset()
     # done = False
     terminated = False
     truncated = False
+
+    meshcat.StartRecording()
     while not terminated and not truncated:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
+        print(f"obs: {obs}, reward: {reward}, terminated: {terminated}, truncated: {truncated} \n")
+        # env.render(mode='human') # don't use this during training!
 
-        print(f"obs: {obs}, reward: {reward}, terminated: {terminated}, truncated: {truncated}")
+    meshcat.PublishRecording()
     env.close()
