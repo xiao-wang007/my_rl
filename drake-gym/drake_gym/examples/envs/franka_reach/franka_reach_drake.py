@@ -369,6 +369,19 @@ def make_sim(generator,
     simulator.Initialize()
             
     ######################### Episode termination
+    # TODO: instantiate CompositeTermination()
+    termination_checker = CompositeTermination()
+    termination_checker.add('time_limit', 
+        lambda **kw: time_limit_termination(**kw, time_limit=time_limit), 
+        is_success=False)
+    termination_checker.add('goal_reached', 
+        goal_reached_termination, 
+        is_success=True)
+    termination_checker.add('joint_limits', 
+        lambda **kw: joint_limit_termination(**kw, q_min=q_min, q_max=q_max), 
+        is_success=False)
+
+
     # Episode end conditions:
     def monitor(context, state_view=StateView):
         plant_context = plant.GetMyContextFromRoot(context)
