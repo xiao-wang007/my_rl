@@ -99,8 +99,12 @@ def reaching_reward(state, plant, plant_context, target, **kwargs):
     e_ang_x = np.arccos(np.clip(ex, -1.0, 1.0))
     e_ang_z = np.arccos(np.clip(ez, -1.0, 1.0))
 
+    r_terminal = 0.
     if np.linalg.norm(ep) < epsilon_pos and e_ang_x < epsilon_ori and e_ang_z < epsilon_ori:
         r_terminal = 10.0
+    
+    return r_p + r_o + r_terminal
+
 
 
 

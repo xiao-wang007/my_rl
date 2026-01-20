@@ -1585,3 +1585,94 @@ If you have **Settings Sync** enabled (with GitHub), chat history *may* sync acr
 ---
 
 **Quickest method:** Just select all text in this chat, copy, and paste into a shared doc (Google Docs, Notion, or a `.md` file in your repo).
+
+
+# 20-01-2025
+## Simple Fixed-Target Reach
+**No curriculum needed.** A single target with dense rewards (like your exponential distance reward) is easy enough for most RL algorithms to solve directly.
+
+## Global Reaching (Random Targets)
+
+**Usually no curriculum needed either**, but it depends on workspace size and reward density:
+
+| Scenario | Curriculum? |
+|----------|-------------|
+| Targets within easy reach | No — standard PPO/SAC handles this |
+| Full workspace, sparse reward | Maybe — if agent struggles to find any success |
+| Cluttered/constrained space | Yes — start with easy regions |
+
+**Why global reaching is still easy:**
+- Dense shaping reward (your `r_p = exp(-k*||error||²)`) provides gradient everywhere
+- Agent sees many targets → generalizes naturally
+- No obstacles to navigate around
+
+## When You DO Need Curriculum
+
+1. **Sparse rewards** (only +1 at goal, 0 elsewhere)
+2. **Very large workspace** with small tolerance
+3. **Obstacle avoidance** — start with no obstacles
+4. **Long-horizon tasks** — reaching is just step 1
+
+## Practical Advice for Global Reaching
+
+Just randomize target uniformly in the workspace from the start:
+```python
+target_pos = np.random.uniform(workspace_low, workspace_high)
+```
+
+If training is slow, try:
+1. **Increase tolerance** initially, then tighten
+2. **Start closer** to the arm's neutral pose, expand range
+3. **Hindsight Experience Replay (HER)** — relabels failed episodes as successes for reached positions
+
+But honestly, with your dense reward design, straight PPO/SAC should work without any curriculum for a 7-DOF reach task.
+
+--------------------------------------------------------------------------------
+# 21-01-2026_TODO
+Good catch — **it doesn't know**. This is a bug in the current setup.
+
+Looking at your code:
+
+1. **Fixed target** is defined at the top of `make_sim()`:
+   ```python
+   p_ee_goal_base = [0.5, 0.0, 0.5]
+   rot_ee_goal_base = RollPitchYaw(0, np.pi/2, 0).ToQuaternion()
+   ```
+
+2. **Termination checker** is called in `monitor()` but only passes `ee_pos`, not `target_pose`:
+   ```python
+   triggered, reason, is_success = termination_checker(t=t, qs=qs, vs=vs, ee_pos=ee_pos)
+   ```
+
+3. **`set_home()`** has a TODO for randomizing targets but doesn't update the termination checker.
+
+## Fix
+
+You need to pass the target to the termination checker. Options:
+
+**Option 1: Store target in termination checker** (your `CompositeTermination` already has `set_target()`)
+
+```python
+# In set_home(), after randomizing target:
+termination_checker.set_target(target_pose)
+```
+
+But `termination_checker` is local to `make_sim()`, so you'd need to expose it.
+
+**Option 2: Pass target through monitor call** (cleaner)
+
+In `monitor()`, get the target from the goal observation port and pass it:
+```python
+goal_pose = diagram.GetOutputPort("goal_ee_pose").Eval(context)
+triggered, reason, is_success = termination_checker(
+    t=t, qs=qs, vs=vs, ee_pose=ee_pose, target_pose=goal_pose
+)
+```
+
+**Option 3: Store target in diagram as a mutable source**
+
+Replace `ConstantVectorSource` style goal with a mutable system that `set_home()` can update.
+
+---
+
+**Recommended**: Option 2 is simplest — just read the goal from your existing `goal_ee_pose` output port in the monitor function. Want me to implement this fix?

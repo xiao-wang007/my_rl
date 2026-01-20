@@ -54,6 +54,8 @@ from pydrake.systems.drawing import plot_graphviz, plot_system_graphviz
 
 from drake_gym.drake_gym import DrakeGymEnv
 
+from terminations import *
+
 # Get the path to the models directory
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
@@ -370,14 +372,20 @@ def make_sim(generator,
             
     ######################### Episode termination
     # TODO: instantiate CompositeTermination()
+    # Joint limits for Franka Panda (from URDF, in radians)
+    q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
+    q_min = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
+    v_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]) # panda hardware limits
+    # u_up = np.array([87, 87, 87, 87, 12, 12, 12])
+
     termination_checker = CompositeTermination()
-    termination_checker.add('time_limit', 
+    termination_checker.add_termination('time_limit', 
         lambda **kw: time_limit_termination(**kw, time_limit=time_limit), 
         is_success=False)
-    termination_checker.add('goal_reached', 
-        goal_reached_termination, 
+    termination_checker.add_termination('ee_position_goal_reached', 
+        lambda **kw: ee_pose_goal_reached_termination(**kw, ep_threshold=0.1, eq_threshold=0.35), 
         is_success=True)
-    termination_checker.add('joint_limits', 
+    termination_checker.add_termination('joint_limits', 
         lambda **kw: joint_limit_termination(**kw, q_min=q_min, q_max=q_max), 
         is_success=False)
 
@@ -387,143 +395,28 @@ def make_sim(generator,
         plant_context = plant.GetMyContextFromRoot(context)
         state = plant.GetOutputPort("panda_state").Eval(plant_context)
         s = state_view(state)
-        # print(f"\n s = {s} \n")
 
         # print cleanly
         t = context.get_time()
         qs = [round(getattr(s, f"panda_joint{i}_q").item(), 3) for i in range(1, 8)]
         vs = [round(getattr(s, f"panda_joint{i}_w").item(), 3) for i in range(1, 8)]
-        print(f"state at time {t:.2f} s: \n qs = {qs}  \
-                                         \n vs = {vs} \n")
-
-        ''' Truncation: the episode duration reaches the time limit. 
-            Need this for finite horizon and stable learning '''
-        if context.get_time() > time_limit: # in RL, usually this is measured in steps right?
-            if debug:
-                print("Episode reached time limit.")
-            return EventStatus.ReachedTermination(
-                diagram,
-                "time limit")
-
-        ''' Define termination by goal or safety constraints violation '''
-        # for franka-reaching, defined distance-to-goal
-        plant_compute.SetPositions(plant_compute_context,
-                                   qs)
+        print(f"state at time {t:.2f} s: \n qs = {qs}  \ \n vs = {vs} \n")
 
         # TODO: change to "dummy1" later after welding finger to ee_link                    
+        plant_compute.SetPositions(plant_compute_context, qs)
         ee_frame = plant_compute.GetFrameByName("panda_link8")
-        base_frame = plant_compute.GetFrameByName("panda_link0")
-        X_base_ee = ee_frame.CalcPose(plant_compute_context, base_frame)
-        p_ee_base = X_base_ee.translation()
-        rot_ee_base = X_base_ee.rotation().ToQuaternion()
+        ee_pos = ee_frame.CalcPoseInWorld(plant_compute_context).translation()
 
-        dist_to_goal = np.linalg.norm(p_ee_base - np.array(p_ee_goal_base))
-        if dist_to_goal < 0.05:  # within 5 cm of the goal
-            if debug:
-                print("Reached goal!")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Reached goal")
+        # Check all conditions
+        triggered, reason, is_success = termination_checker(t=t,
+                                                            qs=qs,
+                                                            vs=vs,
+                                                            ee_pos=ee_pos,)
         
-        # quaternion distance
-        def quat_error(q_d, q_c):
-            """
-            q = [w, x, y, z] convention
-            Returns 3D orientation error vector.
-            """
-            # Ensure shortest path (handle double cover)
-            if np.dot(q_d, q_c) < 0:
-                q_c = -q_c
-            
-            # Error quaternion: q_e = q_d ⊗ q_c*
-            w_d, x_d, y_d, z_d = q_d
-            w_c, x_c, y_c, z_c = q_c
-            
-            # q_c conjugate (inverse for unit quaternion)
-            # q_e = q_d * conj(q_c)
-            w_e = w_d*w_c + x_d*x_c + y_d*y_c + z_d*z_c
-            x_e = -w_d*x_c + x_d*w_c - y_d*z_c + z_d*y_c
-            y_e = -w_d*y_c + x_d*z_c + y_d*w_c - z_d*x_c
-            z_e = -w_d*z_c - x_d*y_c + y_d*x_c + z_d*w_c
-            
-            # For small errors: error ≈ 2 * [x_e, y_e, z_e]
-            return 2.0 * np.array([x_e, y_e, z_e])
-
-        ori_error = quat_error(rot_ee_goal_base.wxyz(),
-                               rot_ee_base.wxyz())
-        angle_error = np.linalg.norm(ori_error)
-        if angle_error < 0.2:  # within 0.2 rads in axis-angle angle error
+        if triggered:
             if debug:
-                print("Reached goal orientation!")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Reached goal orientation")
-
-        # Joint limits for Franka Panda (from URDF, in radians)
-        q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
-        q_min = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
-        v_max = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]) # panda hardware limits
-        # u_up = np.array([87, 87, 87, 87, 12, 12, 12])
-        
-        # Termination: Joint position limits exceeded.
-        if abs(s.panda_joint1_q) > q_max[0]:
-            if debug:
-                print("Joint position 1 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 1 exceeded limits")
-        
-        if abs(s.panda_joint2_q) > q_max[1]:
-            if debug:
-                print("Joint position 2 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 2 exceeded limits")
-
-        if abs(s.panda_joint3_q) > q_max[2]:
-            if debug:
-                print("Joint position 3 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 3 exceeded limits")
-
-        if abs(s.panda_joint5_q) > q_max[4]:
-            if debug:
-                print("Joint position 5 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 5 exceeded limits")
-
-        if abs(s.panda_joint7_q) > q_max[6]:
-            if debug:
-                print("Joint position 7 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 7 exceeded limits")
-        
-        if s.panda_joint4_q < q_min[3] or s.panda_joint4_q > q_max[3]:
-            if debug:
-                print("Joint position 4 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 4 exceeded limits")
-
-        if s.panda_joint6_q < q_min[5] or s.panda_joint6_q > q_max[5]:
-            if debug:
-                print("Joint position 6 exceeded limits.")
-            return EventStatus.ReachedTermination(
-                   diagram,
-                   "Joint position 6 exceeded limits")
-        
-        # TODO: Termination: Joint velocity limits exceeded.
-        # if abs(s.panda_joint1_w) > v_max[0]:
-        #     if debug:
-        #         print("Joint velocity 1 exceeded limits.")
-        #     return EventStatus.ReachedTermination(
-        #            diagram,
-        #            "Joint velocity 1 exceeded limits")
-
-        return EventStatus.Succeeded()
+                print(f"Episode terminated due to: {reason}")
+            return EventStatus.ReachedTermination(diagram, reason)
 
     simulator.set_monitor(monitor)
     
@@ -599,13 +492,13 @@ def set_home(simulator, diagram_context, seed):
     plant = diagram.GetSubsystemByName("plant_sim")
     plant_context = diagram.GetMutableSubsystemContext(plant, diagram_context)
 
-    # Clip the positions (I may not need this but for keeping generality)
-    for joint_name, q in home_positions.items():
-        joint = plant.GetJointByName(joint_name)
-        joint.set_angle(plant_context,
-                        np.clip(q,
-                                joint.position_lower_limit(),
-                                joint.position_upper_limit()))
+    # # Clip the positions (I may not need this but for keeping generality)
+    # for joint_name, q in home_positions.items():
+    #     joint = plant.GetJointByName(joint_name)
+    #     joint.set_angle(plant_context,
+    #                     np.clip(q,
+    #                             joint.position_lower_limit(),
+    #                             joint.position_upper_limit()))
     
     # Randomize other params:
     # e.g. friction, mass, link dimensions, gravity, etc.
@@ -622,6 +515,11 @@ def set_home(simulator, diagram_context, seed):
     ''' #TODO: randomize the target of ee using FK here; 
         To think: does manipulability matter here? it should be used to
         quantify how well the robot can reach certain poses? could be useful'''
+    q_random = np.random.uniform(q_min, q_max)
+    plant.SetPositions(plant_context, q_random)
+    ee_frame = plant.GetFrameByName("panda_link8")
+    p_ee_random = ee_frame.CalcPoseInWorld(plant_context).translation()
+
 
 
 
