@@ -55,6 +55,7 @@ from pydrake.systems.drawing import plot_graphviz, plot_system_graphviz
 from drake_gym.drake_gym import DrakeGymEnv
 
 from terminations import *
+from functools import partial
 
 # Get the path to the models directory
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -89,8 +90,16 @@ def AddAgent(plant):
                      plant.GetFrameByName("panda_link0"))
     return agent
 
+class GoalState():
+    """ Shared mutable goal state gets updated on reset (in set_home()) 
+        and read by RewardSystem() during sim steps.  """
+    def __init__(self):
+        self.goal_pos = np.array([0.5, 0.5, 0.3])
+        # self.goal_quat = np.array([1., 0., 0., 0.])  # w, x, y, z
+        self.goal_r1r2 = np.zeros(6)
 
 def make_sim(generator,
+             goal_state,
              meshcat=None,
              time_limit=5,
              debug=False,
@@ -99,8 +108,8 @@ def make_sim(generator,
              add_disturbances=False):
 
     ''' RL goal or parameters '''
-    p_ee_goal_base = [0.5, 0.0, 0.5]
-    rot_ee_goal_base = RollPitchYaw(0, np.pi/2, 0).ToQuaternion()
+    # p_ee_goal_base = [0.5, 0.0, 0.5]
+    # rot_ee_goal_base = RollPitchYaw(0, np.pi/2, 0).ToQuaternion()
 
     builder = DiagramBuilder()
 
@@ -196,12 +205,23 @@ def make_sim(generator,
 
     ######################### Observer
     class observation_publisher(LeafSystem):
-        def __init__(self, noise=False):
+        '''
+        For observation, use r1, r2 for learning end-effector orientation. But quaternion is
+        used for computing the reward in orientation since no learning there.
+        
+        :var might: Description
+        :var narrow: Description
+        :var improves: Description
+        :var handle: Description
+        '''
+
+        def __init__(self, noise=False, goal_state=None):
             LeafSystem.__init__(self)
             self.Ns = plant.num_multibody_states()
+            self.goal_state = goal_state  # Store reference to shared goal
             self.DeclareVectorInputPort("plant_states", self.Ns)
             self.DeclareVectorOutputPort("panda_joint_obs", self.Ns, self.CalcObs1)
-            self.DeclareVectorOutputPort("ee_pose_obs", 7, self.CalcObs2)  # pos(3) + quat(4)
+            self.DeclareVectorOutputPort("ee_pose_obs", 7, self.CalcObs2)  # pos(3) + [r1, r2](6)
             self.DeclareVectorOutputPort("ee_pose_goal", 7, self.CalcObsGoal)
             self.noise = noise
             
@@ -229,18 +249,33 @@ def make_sim(generator,
             
             # Extract position and quaternion
             pos = X_WE.translation()
-            quat = X_WE.rotation().ToQuaternion().wxyz()  # [w, x, y, z]
+            rx = X_WE.rotation().matrix()[:, 0].flatten()  
+            ry = X_WE.rotation().matrix()[:, 1].flatten()
             
-            ee_pose = np.concatenate([pos, quat])
             if self.noise:
-                ee_pose[:3] += np.random.uniform(low=-0.005, high=0.005, size=3)
+                pos += np.random.uniform(low=-0.005, high=0.005, size=3)
+
+                rx += np.random.uniform(low=-0.01, high=0.01, size=3)
+                ry += np.random.uniform(low=-0.01, high=0.01, size=3)
+
+                # re-normalize r1 and r2 to ensure othogonality after noise addition
+                rx /= np.linalg.norm(rx)
+                ry /= np.linalg.norm(ry)
+
+                # re-orthogonalize r2 w.r.t. r1
+                ry = ry -np.dot(ry, rx) * rx
+                ry /= np.linalg.norm(ry)
+
+            ee_pose = np.concatenate([pos, rx, ry])
             output.SetFromVector(ee_pose)
 
+        # TODO: this function not needed for global policy
         def CalcObsGoal(self, context, output):
-            goal = np.array(p_ee_goal_base + rot_ee_goal_base.wxyz())
+            goal = np.array(self.goal_state.goal_pos.tolist() + 
+                            self.goal_state.goal_r1r2.tolist())
             output.SetFromVector(goal)
         
-    obs_pub = builder.AddSystem(observation_publisher(noise=obs_noise))
+    obs_pub = builder.AddSystem(observation_publisher(noise=obs_noise, goal_state=goal_state))
 
     builder.Connect(plant.get_state_output_port(), obs_pub.get_input_port(0))
     builder.ExportOutput(obs_pub.get_output_port(0), "observations_jnt_states")
@@ -249,19 +284,19 @@ def make_sim(generator,
 
     class RewardSystem(LeafSystem):
         def __init__(self, Ns, 
-                     plant_compute, plant_compute_context, composite_reward):
+                     plant_compute, plant_compute_context, composite_reward,
+                     goal_state):
             LeafSystem.__init__(self)
             self.plant = plant_compute
             self.plant_context = plant_compute_context
             self.composite_reward = composite_reward
+            self.goal_state = goal_state  # Shared mutable goal
 
             self.DeclareVectorInputPort("state", Ns)
             self.DeclareVectorOutputPort("reward", 1, self.CalcReward)
             # self.DeclareVectorOutputPort("safety_reward", 1, self.CalcSafetyReward)
         
         def CalcReward(self, context, output):
-            # reward = 1
-
             # call my custom reward functions here
             state = self.get_input_port(0).Eval(context)
 
@@ -275,6 +310,8 @@ def make_sim(generator,
 
             total, _ = self.composite_reward(
                 state=state,
+                target_pos=self.goal_state.goal_pos,
+                target_r1r2=self.goal_state.goal_r1r2,
                 plant=self.plant,
                 plant_context=self.plant_context,
             )
@@ -285,10 +322,20 @@ def make_sim(generator,
         #     # adapt task constraints here
         #     pass 
         
-    reward = builder.AddSystem(RewardSystem())
+    # TODO: create composite_reward with your reward functions
+    # composite_reward = CompositeReward()
+    # composite_reward.add('reaching', reaching_reward, weight=1.0)
+    composite_reward = lambda **kwargs: (1.0, {})  # Placeholder: constant reward
+    
+    reward = builder.AddSystem(RewardSystem(
+        Ns=Ns,
+        plant_compute=plant_compute,
+        plant_compute_context=plant_compute_context,
+        composite_reward=composite_reward,
+        goal_state=goal_state
+    ))
     builder.Connect(plant.get_state_output_port(), reward.get_input_port(0))
     builder.ExportOutput(reward.GetOutputPort("reward"), "reward")
-    builder.ExportOutput(reward.GetOutputPort("safety_reward"), "safety_reward")
 
     if monitoring_camera:
         # add an overhead camera for video logging of rollout evaluations
@@ -406,12 +453,17 @@ def make_sim(generator,
         plant_compute.SetPositions(plant_compute_context, qs)
         ee_frame = plant_compute.GetFrameByName("panda_link8")
         ee_pos = ee_frame.CalcPoseInWorld(plant_compute_context).translation()
+        ee_quat = ee_frame.CalcPoseInWorld(plant_compute_context).rotation().ToQuaternion().wxyz()
 
         # Check all conditions
         triggered, reason, is_success = termination_checker(t=t,
                                                             qs=qs,
                                                             vs=vs,
-                                                            ee_pos=ee_pos,)
+                                                            ee_pos=ee_pos,
+                                                            ee_quat=ee_quat,
+                                                            target_pos=goal_state.goal_pos,
+                                                            target_r1r2=goal_state.goal_r1r2
+                                                            )
         
         if triggered:
             if debug:
@@ -422,9 +474,12 @@ def make_sim(generator,
     
     return simulator
 
-
-def set_home(simulator, diagram_context, seed):
-    ''' An interface for domain randomization '''
+def set_home(simulator, diagram_context, seed, goal_state):
+    ''' An interface for domain and goal randomization 
+        goal_state: an mutable object to store the goal position and orientation
+                    it got randomized in each reset that calls set_home()
+    '''
+    print(f"set_home called! New goal: {goal_state.goal_pos}")
 
     # Joint limits for Franka Panda (from URDF, in radians)
     q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
@@ -520,8 +575,12 @@ def set_home(simulator, diagram_context, seed):
     ee_frame = plant.GetFrameByName("panda_link8")
     p_ee_random = ee_frame.CalcPoseInWorld(plant_context).translation()
 
+    rot_ee_random = ee_frame.CalcPoseInWorld(plant_context).rotation().matrix()
+    rx_random = rot_ee_random[:, 0].flatten()  
+    ry_random = rot_ee_random[:, 1].flatten()
 
-
+    goal_state.goal_pos = p_ee_random
+    goal_state.goal_r1r2 = np.concatenate([rx_random, ry_random])
 
 def PandaReachEnv(observations="state",
                   meshcat=None,
@@ -531,8 +590,13 @@ def PandaReachEnv(observations="state",
                   monitoring_camera=False,
                   add_disturbances=False):
     
+    # create goal state for randomized goals to be shared between RewardSystem()
+    # and set_home()
+    goal_state = GoalState()
+    
     # make simulation
     simulator = make_sim(generator=RandomGenerator(),
+                         goal_state=goal_state,
                          meshcat=meshcat,
                          time_limit=time_limit,
                          debug=debug,
@@ -567,7 +631,7 @@ def PandaReachEnv(observations="state",
         reward="reward", # will change later as I progress
         action_port_id="actions_jnt_vel", # will change later as I progress
         observation_port_id="observations_jnt_states",
-        set_home=set_home,
+        set_home=partial(set_home, goal_state=goal_state),
         render_rgb_port_id="camera1_stream" if monitoring_camera else None)
     
     # Expose parameters that could be useful for learning
@@ -595,7 +659,7 @@ if __name__ == "__main__":
     while not terminated and not truncated:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
-        print(f"obs: {obs}, reward: {reward}, terminated: {terminated}, truncated: {truncated} \n")
+        print(f"obs: \n {obs}, \n reward: {reward}, terminated: {terminated}, truncated: {truncated} \n")
         # env.render(mode='human') # don't use this during training!
 
     meshcat.PublishRecording()

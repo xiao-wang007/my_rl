@@ -1,6 +1,7 @@
 # terminations.py
 import numpy as np
 from pydrake.systems.framework import EventStatus
+from drake_gym.examples.envs.franka_reach.utils import r1r2_to_quaternion, quat_error
 
 
 class TerminationResult:
@@ -25,7 +26,7 @@ def ee_position_goal_reached_termination(ee_pos, target_pos, threshold=0.05, **k
         return TerminationResult(True, "position reached goal")
     return TerminationResult(False)
 
-def ee_pose_goal_reached_termination(ee_pose, target_pose, ep_threshold=0.1, 
+def ee_pose_goal_reached_termination(ee_pos, ee_quat, target_pos, target_r1r2, ep_threshold=0.1, 
                                      eq_threshold=0.35, **kwargs):
     '''
     Docstring for ee_pose_goal_reached_termination
@@ -37,32 +38,14 @@ def ee_pose_goal_reached_termination(ee_pose, target_pose, ep_threshold=0.1,
 
     norm(eq) = 2 * sin(theta/2) where theta is the angle between two quaternions
     '''
-    # quaternion distance
-    def quat_error(q_d, q_c):
-        """
-        q = [w, x, y, z] convention
-        Returns 3D orientation error vector.
-        """
-        # Ensure shortest path (handle double cover)
-        if np.dot(q_d, q_c) < 0:
-            q_c = -q_c
-        
-        # Error quaternion: q_e = q_d ⊗ q_c*
-        w_d, x_d, y_d, z_d = q_d
-        w_c, x_c, y_c, z_c = q_c
-        
-        # q_c conjugate (inverse for unit quaternion)
-        # q_e = q_d * conj(q_c)
-        w_e = w_d*w_c + x_d*x_c + y_d*y_c + z_d*z_c
-        x_e = -w_d*x_c + x_d*w_c - y_d*z_c + z_d*y_c
-        y_e = -w_d*y_c + x_d*z_c + y_d*w_c - z_d*x_c
-        z_e = -w_d*z_c - x_d*y_c + y_d*x_c + z_d*w_c
-        
-        # For small errors: error ≈ 2 * [x_e, y_e, z_e]
-        return 2.0 * np.array([x_e, y_e, z_e])
-
-    ep = np.linalg.norm(ee_pose[:3] - target_pose[:3])
-    eq = quat_error(target_pose[3:], ee_pose[3:])
+    # Skip check if goal not set yet (happens during simulator.Initialize() before set_home())
+    if target_pos is None or target_r1r2 is None:
+        return TerminationResult(False)
+    
+    # convert target_r1r2 to quaternion
+    target_quat = r1r2_to_quaternion(target_r1r2)
+    ep = np.linalg.norm(ee_pos - target_pos)
+    eq = quat_error(target_quat, ee_quat)
 
     if ep < ep_threshold and np.linalg.norm(eq) < eq_threshold:
         return TerminationResult(True, "end-effector pose reached goal")
@@ -70,6 +53,8 @@ def ee_pose_goal_reached_termination(ee_pose, target_pose, ep_threshold=0.1,
 
 def joint_limit_termination(qs, q_min, q_max, margin=0.01, **kwargs):
     """Safety: joint limits violated."""
+    q_min = np.array(q_min)
+    q_max = np.array(q_max)
     if np.any(qs < q_min + margin) or np.any(qs > q_max - margin):
         return TerminationResult(True, "joint limit violated")
     return TerminationResult(False)
@@ -77,6 +62,7 @@ def joint_limit_termination(qs, q_min, q_max, margin=0.01, **kwargs):
 
 def velocity_limit_termination(vs, v_max, **kwargs):
     """Safety: velocity limits exceeded."""
+    v_max = np.array(v_max)
     if np.any(np.abs(vs) > v_max):
         return TerminationResult(True, "velocity limit exceeded")
     return TerminationResult(False)

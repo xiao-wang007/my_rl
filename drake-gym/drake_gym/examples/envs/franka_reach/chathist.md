@@ -1676,3 +1676,285 @@ Replace `ConstantVectorSource` style goal with a mutable system that `set_home()
 ---
 
 **Recommended**: Option 2 is simplest — just read the goal from your existing `goal_ee_pose` output port in the monitor function. Want me to implement this fix?
+
+-------------------------------------------------------------------------------
+# 20-01-2026 Morning: My current implementation for randomizing goals
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#1-1), lines 1 to 100
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#100-100), lines 100 to 200
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#200-200), lines 200 to 330
+
+Now let me check the `set_home` and `PandaReachEnv`: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#510-510), lines 510 to 649
+
+I found the issues! Here's what's wrong:
+
+---
+
+## Issue 1: `RewardSystem` is NOT receiving `goal_state`
+
+In line ~319, `RewardSystem` is created without `goal_state`:
+
+```python
+reward = builder.AddSystem(RewardSystem())  # ❌ Missing goal_state!
+```
+
+But the `__init__` expects parameters:
+```python
+def __init__(self, Ns, plant_compute, plant_compute_context, composite_reward):
+```
+
+**And `goal_state` is not there at all!**
+
+---
+
+## Issue 2: Global `goal_state` vs local `goal_state`
+
+You have **two** `goal_state` objects:
+1. **Global** (line 101): `goal_state = GoalState()` 
+2. **Local** in `PandaReachEnv()` (line 576): `goal_state = GoalState()`
+
+The `make_sim()` default parameter references the **global** one (line 104):
+```python
+def make_sim(generator, goal_state=goal_state, ...):  # Uses global as default
+```
+
+But `PandaReachEnv()` creates a **new local** one and passes it — so they don't match!
+
+---
+
+## Issue 3: `set_home` doesn't have `goal_state` parameter
+
+Looking at your `set_home` function signature (around line 460), it needs to accept `goal_state`:
+
+```python
+def set_home(simulator, diagram_context, seed, goal_state):  # Need goal_state param!
+```
+
+---
+
+## Fixes Needed: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#450-450), lines 450 to 480
+
+Good, `set_home` already has `goal_state` parameter. Now let me check the full issue with `RewardSystem`: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#280-280), lines 280 to 330
+
+Here are the issues and fixes:
+
+---
+
+## Problems Found:
+
+### 1. `RewardSystem` is not receiving `goal_state` OR any arguments (line 324)
+```python
+reward = builder.AddSystem(RewardSystem())  # ❌ No arguments passed!
+```
+
+### 2. `RewardSystem.__init__` doesn't have `goal_state` parameter (line 287-288)
+```python
+def __init__(self, Ns, plant_compute, plant_compute_context, composite_reward):
+    # ❌ Missing goal_state
+```
+
+### 3. `CalcReward` doesn't pass `goal_state` info to `composite_reward` (line 313-317)
+```python
+total, _ = self.composite_reward(
+    state=state,
+    plant=self.plant,
+    plant_context=self.plant_context,
+    # ❌ Missing target_pos, target_r1r2
+)
+```
+
+### 4. Global `goal_state` on line 101 shouldn't exist
+You're creating a local one in `PandaReachEnv()` — the global one causes confusion.
+
+---
+
+## Fixes: 
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+Some replacements succeeded. Let me check what still needs fixing: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#90-90), lines 90 to 110
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#280-280), lines 280 to 340
+
+The `RewardSystem` is now correctly wired. Let me fix the remaining issues - the global `goal_state` and `set_home` signature: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#460-460), lines 460 to 480
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#210-210), lines 210 to 230
+
+Good progress! Now let me check `observation_publisher` to make sure it properly stores and uses `goal_state`: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#215-215), lines 215 to 285
+
+I see the issue — `observation_publisher` receives `goal_state` but doesn't store it! It's still referencing the global `goal_state`. Let me fix this: 
+
+Using "Multi-Replace String in Files"
+
+
+```
+
+```
+Now let me verify the changes are correct: 
+
+Checked [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py), 1 problem found
+
+That's just Pylance not finding Drake — not a real issue. Let me verify the key connections are correct: 
+
+Read [](file:///Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/envs/franka_reach/franka_reach_drake.py#92-92), lines 92 to 105
+
+All fixed! Here's the summary of the wiring now:
+
+---
+
+## ✅ Connection Flow (Fixed)
+
+```
+PandaReachEnv()
+    │
+    ├─── goal_state = GoalState()  ◄── Created here ONLY
+    │           │
+    │           ├──────────────────────────────────────────────┐
+    │           │                                              │
+    │           ▼                                              ▼
+    │    make_sim(goal_state=goal_state)               partial(set_home, goal_state=goal_state)
+    │           │                                              │
+    │           ├──► observation_publisher(goal_state)         │
+    │           │         └── self.goal_state = goal_state     │
+    │           │         └── CalcObsGoal uses self.goal_state │
+    │           │                                              │
+    │           └──► RewardSystem(goal_state=goal_state)       │
+    │                     └── self.goal_state = goal_state     │
+    │                     └── CalcReward uses self.goal_state  │
+    │                                                          │
+    └── DrakeGymEnv(set_home=partial(...))                     │
+              │                                                │
+              └── On reset(): calls set_home ──────────────────┘
+                                    │
+                                    ▼
+                    goal_state.goal_pos = new_random_pos
+                    goal_state.goal_r1r2 = new_random_rot
+                                    │
+                                    ▼
+                    RewardSystem & observation_publisher
+                    now see the updated goal values!
+```
+
+All three components (`observation_publisher`, `RewardSystem`, `set_home`) now reference the **same `GoalState` instance** created in `PandaReachEnv()`.
+
+Made changes.
+
+----------------------------------------------------------------------------------
+# monitor() callback for termination
+They're **NOT directly connected**. They're separate:
+
+## observation_publisher (LeafSystem)
+- Part of the Drake Diagram
+- Outputs observations to the RL agent via ports
+- Called every simulation step automatically by Drake
+
+## monitor() (Callback function)
+- Passed to `simulator.set_monitor(monitor)`
+- Called by the simulator to check termination
+- Gets state **directly from the plant**, not from observation_publisher
+
+```python
+def monitor(context, state_view=StateView):
+    # Gets state directly from plant, NOT from observer
+    plant_context = plant.GetMyContextFromRoot(context)
+    state = plant.GetOutputPort("panda_state").Eval(plant_context)
+    
+    # Computes ee_pos itself using plant_compute
+    plant_compute.SetPositions(plant_compute_context, qs)
+    ee_pos = ee_frame.CalcPoseInWorld(plant_compute_context).translation()
+    
+    # Checks termination
+    triggered, reason, is_success = termination_checker(...)
+```
+
+## Diagram:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Drake Simulator                                            │
+│                                                             │
+│   plant ──► observation_publisher ──► Gym env (observations)│
+│     │                                                       │
+│     │                                                       │
+│     └──────────────────────────────► monitor() callback     │
+│            (reads directly)            (checks termination) │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Both read from `plant` independently** — there's no dependency between them. This is actually good because:
+1. Observer can add noise for observations
+2. Monitor gets clean state for accurate termination checks
+
+-----------------------------------------------------------------------
+# a bit of implementation tips
+No! You **don't** need to move `CompositeTermination()` inside `monitor()`. That would be wasteful (creating new object every step).
+
+The issue is your lambda is trying to capture `ee_pos` and `ee_quat` **at definition time** (when they don't exist yet):
+
+```python
+# ❌ WRONG - ee_pos/ee_quat don't exist here!
+lambda **kw: ee_pose_goal_reached_termination(**kw, ee_pos=ee_pos, ee_quat=ee_quat, ...)
+```
+
+**Fix: Let `ee_pos`/`ee_quat` flow through `**kw`** (passed from monitor):
+
+```python
+# ✅ CORRECT - ee_pos/ee_quat come from monitor() via **kw
+termination_checker.add_termination('ee_position_goal_reached', 
+    lambda **kw: ee_pose_goal_reached_termination(**kw, ep_threshold=0.1, eq_threshold=0.35), 
+    is_success=True)
+```
+
+Then in `monitor()`, you pass them:
+
+```python
+def monitor(context, ...):
+    # ... compute ee_pos, ee_quat ...
+    
+    triggered, reason, is_success = termination_checker(
+        t=t,
+        qs=qs,
+        vs=vs,
+        ee_pos=ee_pos,           # Passed here
+        ee_quat=ee_quat,         # Passed here
+        target_pos=goal_state.goal_pos,
+        target_quat=goal_state.goal_quat,  # Need to add this to GoalState!
+    )
+```
+
+And in `terminations.py`:
+
+```python
+def ee_pose_goal_reached_termination(ee_pos, ee_quat, target_pos, target_quat,
+                                      ep_threshold=0.05, eq_threshold=0.1, **kwargs):
+    # Position check
+    pos_error = np.linalg.norm(ee_pos - target_pos)
+    
+    # Quaternion distance
+    quat_dot = abs(np.dot(ee_quat, target_quat))
+    rot_error = 1.0 - quat_dot
+    
+    if pos_error < ep_threshold and rot_error < eq_threshold:
+        return TerminationResult(True, "reached goal")
+    return TerminationResult(False)
+```
+
+**Summary:** Keep `CompositeTermination()` outside monitor. Only hardcode **fixed** values (thresholds) in the lambda. Dynamic values (`ee_pos`, `ee_quat`, `target_pos`) flow through `**kw` from `monitor()`.
