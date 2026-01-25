@@ -18,14 +18,15 @@ class CompositeReward():
     def set_target(self, target_pose):
         self.target_pose = target_pose
     
-    def __call__(self, state, plant, plant_context, action=None):
+    def __call__(self, state, plant, plant_context, target_pos=None, target_r1r2=None, action=None):
         total = 0.0
         breakdown = {}
 
         # build kwargs with all available info
         kwargs = {
             'state': state,
-            'target': self.target_pose,
+            'target_pos': target_pos,
+            'target_r1r2': target_r1r2,
             'plant': plant,
             'plant_context': plant_context,
             'action': action
@@ -33,7 +34,7 @@ class CompositeReward():
 
         for compo in self.components:
             # to be more general
-            r = compo['fn'](**kwargs) # each fn takes only what needed as inputs
+            r = compo['fn'](**kwargs)  # each fn takes only what needed as inputs
             breakdown[compo['name']] = r 
             total += compo['weight'] * r
     
@@ -60,26 +61,32 @@ def safety_reward(state, **kwargs):
 
 '''
 
-def reaching_reward(state, plant, plant_context, target, **kwargs):
+def reaching_reward(state, plant, plant_context, target_pos, target_r1r2, **kwargs):
     """
-    target: orientation and position of the end-effector target where
-            positions = [x, y, z]
-            orientations = [xhat_w1, xhat_w2, xhat_w3, zhat_w1, zhat_w2, zhat_w3]
+    Reaching reward for end-effector pose matching.
+    
+    Args:
+        state: robot state [q(7), v(7)]
+        plant: MultibodyPlant for FK computation
+        plant_context: context for the plant
+        target_pos: target position [x, y, z]
+        target_r1r2: target orientation as [rx(3), ry(3)] where rx=x-axis, ry=y-axis
     """
     q, _ = state[:7], state[7:14]
     plant.SetPositions(plant_context, q)
     ee_frame = plant.GetFrameByName("panda_link8")
-    ee_pose = plant.CalcPoseInWorld(plant_context, ee_frame)
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
     p_ee_w = ee_pose.translation()
     
     r_ee_w = ee_pose.rotation().matrix()
     ee_xhat_w = r_ee_w[:, 0]
     ee_zhat_w = r_ee_w[:, 2]
 
-    # extract the target
-    p_target_w = target[:3]
-    target_xhat_w = target[3:6]
-    target_zhat_w = target[6:9]
+    # extract the target (compute z-axis from x cross y)
+    p_target_w = target_pos
+    target_xhat_w = target_r1r2[:3]
+    target_yhat_w = target_r1r2[3:6]
+    target_zhat_w = np.cross(target_xhat_w, target_yhat_w)
 
     # position reward (0, 1]
     kp = 10.0

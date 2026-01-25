@@ -57,6 +57,9 @@ from drake_gym.drake_gym import DrakeGymEnv
 from terminations import *
 from functools import partial
 
+from rewards import CompositeReward, reaching_reward
+from terminations import *
+
 # Get the path to the models directory
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
@@ -291,51 +294,61 @@ def make_sim(generator,
             self.plant_context = plant_compute_context
             self.composite_reward = composite_reward
             self.goal_state = goal_state  # Shared mutable goal
+            
+            # Get reward component names for output ordering
+            self.reward_names = [c['name'] for c in composite_reward.components]
+            self.num_rewards = len(self.reward_names)
 
             self.DeclareVectorInputPort("state", Ns)
             self.DeclareVectorOutputPort("reward", 1, self.CalcReward)
-            # self.DeclareVectorOutputPort("safety_reward", 1, self.CalcSafetyReward)
+
+            # Output port for individual reward components (order matches self.reward_names)
+            # TODO: probably use abstract vector output for mixed data types for the breakdown
+            #       such as dict with names and values: reaching: 0.8
+            self.DeclareVectorOutputPort("reward_breakdown", self.num_rewards, self.CalcRewardBreakdown)
         
-        def CalcReward(self, context, output):
-            # call my custom reward functions here
+        def _compute_rewards(self, context):
+            """Compute rewards and return (total, breakdown_dict)."""
             state = self.get_input_port(0).Eval(context)
 
-            ''' setting the plant to the state once per step for efficiency,
-                can do this for each individual reward functions if needed '''
             # set positions in plant context
             qs = state[:self.plant.num_positions()]
             self.plant.SetPositions(self.plant_context, qs)
 
-            # I may need to set v or others as well, depending on the reward functions
-
-            total, _ = self.composite_reward(
+            total, breakdown = self.composite_reward(
                 state=state,
                 target_pos=self.goal_state.goal_pos,
                 target_r1r2=self.goal_state.goal_r1r2,
                 plant=self.plant,
                 plant_context=self.plant_context,
             )
+            return total, breakdown
 
+        def CalcReward(self, context, output):
+            total, _ = self._compute_rewards(context)
             output[0] = total
         
-        # def CalcSafetyReward(self, context, output):
-        #     # adapt task constraints here
-        #     pass 
+        def CalcRewardBreakdown(self, context, output):
+            """Output individual rewards in order of self.reward_names."""
+            _, breakdown = self._compute_rewards(context)
+            for i, name in enumerate(self.reward_names):
+                output[i] = breakdown.get(name, 0.0) 
         
-    # TODO: create composite_reward with your reward functions
-    # composite_reward = CompositeReward()
-    # composite_reward.add('reaching', reaching_reward, weight=1.0)
-    composite_reward = lambda **kwargs: (1.0, {})  # Placeholder: constant reward
+    # Create composite reward with reaching reward function
+    composite_reward = CompositeReward()
+    composite_reward.add_reward('reaching', reaching_reward, weight=1.0)
     
-    reward = builder.AddSystem(RewardSystem(
+    reward_system = builder.AddSystem(RewardSystem(
         Ns=Ns,
         plant_compute=plant_compute,
         plant_compute_context=plant_compute_context,
         composite_reward=composite_reward,
         goal_state=goal_state
     ))
-    builder.Connect(plant.get_state_output_port(), reward.get_input_port(0))
-    builder.ExportOutput(reward.GetOutputPort("reward"), "reward")
+    builder.Connect(plant.get_state_output_port(), reward_system.get_input_port(0))
+    builder.ExportOutput(reward_system.GetOutputPort("reward"), "reward")
+    builder.ExportOutput(reward_system.GetOutputPort("reward_breakdown"), "reward_breakdown")
+    # Reward breakdown order: print(composite_reward.components) to see names
 
     if monitoring_camera:
         # add an overhead camera for video logging of rollout evaluations
@@ -447,7 +460,7 @@ def make_sim(generator,
         t = context.get_time()
         qs = [round(getattr(s, f"panda_joint{i}_q").item(), 3) for i in range(1, 8)]
         vs = [round(getattr(s, f"panda_joint{i}_w").item(), 3) for i in range(1, 8)]
-        print(f"state at time {t:.2f} s: \n qs = {qs}  \ \n vs = {vs} \n")
+        print(f"state at time {t:.2f} s: \n qs = {qs}  \n vs = {vs} \n")
 
         # TODO: change to "dummy1" later after welding finger to ee_link                    
         plant_compute.SetPositions(plant_compute_context, qs)
@@ -659,7 +672,18 @@ if __name__ == "__main__":
     while not terminated and not truncated:
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
-        print(f"obs: \n {obs}, \n reward: {reward}, terminated: {terminated}, truncated: {truncated} \n")
+        
+        # Access reward breakdown from the diagram port
+        diagram = env.simulator.get_system()
+        context = env.simulator.get_context()
+        
+        ''' This is a way to get exported ports from the diagram '''
+        reward_breakdown = diagram.GetOutputPort("reward_breakdown").Eval(context)
+        # Reward names order: ['reaching'] (add more as you add rewards)
+        
+        print(f"obs: \n {obs}")
+        print(f"reward: {reward:.3f}, breakdown: {reward_breakdown}")
+        print(f"terminated: {terminated}, truncated: {truncated} \n")
         # env.render(mode='human') # don't use this during training!
 
     meshcat.PublishRecording()
