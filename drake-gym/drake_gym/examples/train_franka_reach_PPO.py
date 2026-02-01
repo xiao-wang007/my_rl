@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import gymnasium as gym
+import torch
 import wandb
 
 # `multiprocessing` also provides this method, but empirically `psutil`'s
@@ -35,6 +36,11 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from wandb.integration.sb3 import WandbCallback
 
+# register the env to gym
+gym.envs.register(
+    id="panda-reach-v0",
+    entry_point=("envs.franka_reach.franka_reach_drake:PandaReachEnv"), # need to modify this later to point to my env
+)
 
 class OffsetCheckpointCallback(BaseCallback):
     """
@@ -90,17 +96,47 @@ def main():
     parser.add_argument(
         "--log_path",
         help="path to the logs directory.",
-        default="book/rl/BoxFlipUp/logs",
+        default="logs/panda_reach_ppo",
+    )
+    parser.add_argument(
+        "--custom_net",
+        action="store_true",
+        help="Use custom network architecture [256, 256] with ReLU instead of default [64, 64] with Tanh.",
+    )
+    parser.add_argument(
+        "--net_arch",
+        type=int,
+        nargs="+",
+        default=[256, 256],
+        help="Hidden layer sizes for custom network (e.g., --net_arch 256 256 128).",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        choices=["auto", "cpu", "mps", "cuda"],
+        help="Device to use: 'auto' (detect), 'cpu', 'mps' (Apple Silicon), or 'cuda'.",
     )
     args = parser.parse_args()
+
+    # Set up policy kwargs for custom network
+    if args.custom_net:
+        policy_kwargs = dict(
+            net_arch=args.net_arch,
+            activation_fn=torch.nn.ReLU,
+        )
+    else:
+        policy_kwargs = None  # use SB3 defaults: [64, 64] with Tanh
 
     config = {
         "policy_type": "MlpPolicy",
         "total_timesteps": 5e5 if not args.test else 5,
-        "env_name": "BoxFlipUp-v0",
+        "env_name": "panda-reach-v0",
         "env_time_limit": 10 if not args.test else 0.5,
         "local_log_dir": args.log_path,
         "observations": "state",
+        "net_arch": args.net_arch if args.custom_net else [64, 64],
+        "custom_net": args.custom_net,
     }
 
     if args.wandb:
@@ -123,7 +159,7 @@ def main():
     if True:
         checkpoint_cb = OffsetCheckpointCallback(
             save_path=ckpt_dir,
-            name_prefix="ppo_boxflipup",
+            name_prefix="ppo_panda_reach",
             expected_resume_steps=args.resume_steps,
         )
 
@@ -137,13 +173,14 @@ def main():
         [WandbCallback(), every_n_timesteps, ProgressBarCallback()]
     )
 
-    zip = f"data/box_flipup_ppo_{config['observations']}.zip"
+    zip = f"data/panda_reach_ppo_{config['observations']}.zip"
+    Path("data").mkdir(parents=True, exist_ok=True)
 
     num_cpu = int(cpu_count() / 2) if not args.test else 2
     if args.train_single_env:
         meshcat = StartMeshcat()
         env = gym.make(
-            "BoxFlipUp-v0",
+            "PandaReach-v0",
             meshcat=meshcat,
             observations=config["observations"],
             time_limit=config["env_time_limit"],
@@ -152,43 +189,48 @@ def main():
         input("Open meshcat (optional). Press Enter to continue...")
     else:
         # Use a callback so that the forked process imports the environment.
-        def make_boxflipup():
+        def make_pandareach():
             pass
 
             return gym.make(
-                "BoxFlipUp-v0",
+                "PandaReach-v0",
                 observations=config["observations"],
                 time_limit=config["env_time_limit"],
             )
 
         env = make_vec_env(
-            make_boxflipup,
+            make_pandareach,
             n_envs=num_cpu,
             seed=0,
             vec_env_cls=SubprocVecEnv,
         )
 
     if args.test:
-        model = PPO("MlpPolicy", env, n_steps=4, n_epochs=2, batch_size=8)
+        model = PPO("MlpPolicy", env, n_steps=4, n_epochs=2, batch_size=8, policy_kwargs=policy_kwargs)
     elif (
         args.resume_steps is not None
-        and (ckpt_dir / f"ppo_boxflipup_{args.resume_steps}_steps.zip").exists()
+        and (ckpt_dir / f"ppo_panda_reach_{args.resume_steps}_steps.zip").exists()
     ):
         print(f"Loading checkpoint at {args.resume_steps} steps")
         model = PPO.load(
-            str(ckpt_dir / f"ppo_boxflipup_{args.resume_steps}_steps.zip"),
+            str(ckpt_dir / f"ppo_panda_reach_{args.resume_steps}_steps.zip"),
             env,
             verbose=1,
             tensorboard_log=f"runs/{run.id}",
-            device="cuda",
+            device=args.device,
         )
     elif os.path.exists(zip):
         model = PPO.load(
-            zip, env, verbose=1, tensorboard_log=f"runs/{run.id}", device="cuda"
+            zip, env, verbose=1, tensorboard_log=f"runs/{run.id}", device=args.device
         )
     else:
         model = PPO(
-            "MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", device="cuda"
+            "MlpPolicy",
+            env,
+            verbose=1,
+            tensorboard_log=f"runs/{run.id}",
+            device=args.device,
+            policy_kwargs=policy_kwargs,
         )
 
     model.learn(

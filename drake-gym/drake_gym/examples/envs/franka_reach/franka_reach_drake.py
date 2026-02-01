@@ -64,11 +64,6 @@ from terminations import *
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
 
-# register the env to gym
-gym.envs.register(
-    id="BoxFlipUp-v0",
-    entry_point=("envs.franka_reach.franka_reach_drake:PandaReachEnv"), # need to modify this later to point to my env
-)
 
 # Gym parameters.
 sim_time_step = 0.01
