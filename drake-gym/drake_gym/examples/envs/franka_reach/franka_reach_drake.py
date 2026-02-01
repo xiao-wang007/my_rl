@@ -1,5 +1,9 @@
 import os
 import sys
+# Add current directory (franka_reach/) for local imports (terminations, rewards, etc.)
+_THIS_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+if _THIS_MODULE_DIR not in sys.path:
+    sys.path.insert(0, _THIS_MODULE_DIR)
 # franka_reach.py -> franka_reach/ -> envs/ -> examples/
 _EXAMPLES_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, _EXAMPLES_DIR)
@@ -7,7 +11,7 @@ sys.path.insert(0, _EXAMPLES_DIR)
 _DRAKE_GYM_ROOT = os.path.dirname(os.path.dirname(_EXAMPLES_DIR))
 sys.path.insert(0, _DRAKE_GYM_ROOT)
 
-import gym
+import gymnasium as gym
 import matplotlib.pyplot as plt
 
 from named_view_helpers import (
@@ -63,7 +67,6 @@ from terminations import *
 # Get the path to the models directory
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
-
 
 # Gym parameters.
 sim_time_step = 0.01
@@ -455,7 +458,6 @@ def make_sim(generator,
         t = context.get_time()
         qs = [round(getattr(s, f"panda_joint{i}_q").item(), 3) for i in range(1, 8)]
         vs = [round(getattr(s, f"panda_joint{i}_w").item(), 3) for i in range(1, 8)]
-        print(f"state at time {t:.2f} s: \n qs = {qs}  \n vs = {vs} \n")
 
         # TODO: change to "dummy1" later after welding finger to ee_link                    
         plant_compute.SetPositions(plant_compute_context, qs)
@@ -487,7 +489,7 @@ def set_home(simulator, diagram_context, seed, goal_state):
         goal_state: an mutable object to store the goal position and orientation
                     it got randomized in each reset that calls set_home()
     '''
-    print(f"set_home called! New goal: {goal_state.goal_pos}")
+    # print(f"set_home called! New goal: {goal_state.goal_pos}")
 
     # Joint limits for Franka Panda (from URDF, in radians)
     q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
@@ -596,7 +598,8 @@ def PandaReachEnv(observations="state",
                   debug=False,
                   obs_noise=False,
                   monitoring_camera=False,
-                  add_disturbances=False):
+                  add_disturbances=False,
+                  device='cpu'):
     
     # create goal state for randomized goals to be shared between RewardSystem()
     # and set_home()
@@ -614,22 +617,27 @@ def PandaReachEnv(observations="state",
     
     plant_sim = simulator.get_system().GetSubsystemByName("plant_sim")
 
-    # Define action space
+    # Define action space (always use float32 - sufficient for RL and works with MPS)
     Na = 7 # currently, only joint velocities as actions
     low_a  = plant_sim.GetVelocityLowerLimits()[:Na]  # velocity limits are typically symmetric
     high_a = plant_sim.GetVelocityUpperLimits()[:Na]
-    action_space = gym.spaces.Box(low=np.array(low_a, dtype="float64"),
-                                  high=np.array(high_a, dtype="float64"),
-                                  dtype=np.float64)
+    action_space = gym.spaces.Box(
+        low=np.array(low_a, dtype=np.float32),
+        high=np.array(high_a, dtype=np.float32),
+        dtype=np.float32
+    )
+
                         
-    # Define observation space
+    # Define observation space (always use float32 - sufficient for RL and works with MPS)
     low = np.concatenate(
         (plant_sim.GetPositionLowerLimits(), plant_sim.GetVelocityLowerLimits()))
     high = np.concatenate(
         (plant_sim.GetPositionUpperLimits(), plant_sim.GetVelocityUpperLimits()))
-    observation_space = gym.spaces.Box(low=np.asarray(low, dtype="float64"),
-                                       high=np.asarray(high, dtype="float64"),
-                                       dtype=np.float64)
+    observation_space = gym.spaces.Box(
+        low=np.asarray(low, dtype=np.float32),
+        high=np.asarray(high, dtype=np.float32),
+        dtype=np.float32
+    )
     
     env = DrakeGymEnv(
         simulator=simulator,

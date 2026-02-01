@@ -141,7 +141,7 @@ def main():
 
     if args.wandb:
         run = wandb.init(
-            project="BoxFlipUp-v0",
+            project="panda-reach-v0",
             config=config,
             sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
             monitor_gym=True,  # auto-upload videos
@@ -180,22 +180,43 @@ def main():
     if args.train_single_env:
         meshcat = StartMeshcat()
         env = gym.make(
-            "PandaReach-v0",
+            "panda-reach-v0",
             meshcat=meshcat,
             observations=config["observations"],
             time_limit=config["env_time_limit"],
+            device=args.device,
         )
         check_env(env)
         input("Open meshcat (optional). Press Enter to continue...")
     else:
-        # Use a callback so that the forked process imports the environment.
+        # Use a callback so that the forked process imports and registers the environment.
+        # Capture device in closure
+        device = args.device
+        
         def make_pandareach():
-            pass
-
+            import sys
+            import os
+            # Add examples dir to path so imports work in subprocess
+            examples_dir = os.path.dirname(os.path.abspath(__file__))
+            if examples_dir not in sys.path:
+                sys.path.insert(0, examples_dir)
+            # Add drake-gym root for drake_gym module
+            drake_gym_root = os.path.dirname(os.path.dirname(examples_dir))
+            if drake_gym_root not in sys.path:
+                sys.path.insert(0, drake_gym_root)
+            
+            import gymnasium as gym
+            # Register env in subprocess
+            if "panda-reach-v0" not in gym.envs.registry:
+                gym.envs.register(
+                    id="panda-reach-v0",
+                    entry_point="envs.franka_reach.franka_reach_drake:PandaReachEnv",
+                )
             return gym.make(
-                "PandaReach-v0",
+                "panda-reach-v0",
                 observations=config["observations"],
                 time_limit=config["env_time_limit"],
+                device=device,
             )
 
         env = make_vec_env(

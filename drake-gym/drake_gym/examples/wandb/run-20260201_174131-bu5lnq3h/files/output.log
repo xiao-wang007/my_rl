@@ -1,0 +1,23 @@
+/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/stable_baselines3/common/on_policy_algorithm.py:150: UserWarning: You are trying to run PPO on the GPU, but it is primarily intended to run on the CPU when not using a CNN policy (you are using ActorCriticPolicy which should be a MlpPolicy). See https://github.com/DLR-RM/stable-baselines3/issues/1245 for more info. You can pass `device='cpu'` or `export CUDA_VISIBLE_DEVICES=` to force using the CPU.Note: The model will train, but the GPU utilization will be poor and the training might take longer than on CPU.
+  warnings.warn(
+Logging to runs/bu5lnq3h/PPO_1
+[2KTraceback (most recent call last):━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+[2K  File "/Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 260, in <module>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+    sys.exit(main())
+             ^^^^^^
+[2K  File "/Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 252, in main━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+    model.learn(
+[2K  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/stable_baselines3/ppo/ppo.py", line 311, in learn━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+    return super().learn(
+           ^^^^^^^^^^^^^^
+[2K  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/stable_baselines3/common/on_policy_algorithm.py", line 324, in learn━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+    continue_training = self.collect_rollouts(self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2K  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/stable_baselines3/common/on_policy_algorithm.py", line 201, in collect_rollouts━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+    obs_tensor = obs_as_tensor(self._last_obs, self.device)  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2K  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/stable_baselines3/common/utils.py", line 573, in obs_as_tensor━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+    return th.as_tensor(obs, device=device)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2KTypeError: Cannot convert a MPS Tensor to float64 dtype as the MPS framework doesn't support float64. Please use float32 instead.━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
+[35m   0%[0m [38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m0/3,000,000 [0m [ [33m0:00:00[0m < [36m-:--:--[0m , [31m? it/s[0m ]
