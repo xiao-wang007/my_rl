@@ -1,7 +1,7 @@
 from typing import Callable, Optional, Union
 import warnings
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 from pydrake.common import RandomGenerator
@@ -222,6 +222,9 @@ class DrakeGymEnv(gym.Env):
             status = e.args[0]
 
         observation = self.observation_port.Eval(context)
+        
+        # Cast to float32 for compatibility with MPS and consistency
+        observation = np.asarray(observation, dtype=np.float32)
         reward = self.reward(self.simulator.get_system(), context)
         terminated = ((not truncated)
             and status.reason() ==
@@ -236,15 +239,14 @@ class DrakeGymEnv(gym.Env):
 
     def reset(self, *,
               seed: Optional[int] = None,
-              return_info: bool = False,
               options: Optional[dict] = None):
         """
         If a callable "simulator factory" was passed to the constructor, then a
         new simulator is created.  Otherwise this method simply resets the
         `simulator` and its Context.
         """
-        assert options is None  # No options supported yet.
-
+        super().reset(seed=seed, options=options)
+        
         if (seed is not None):
             # TODO(ggould) This should not reset the generator if it was
             # already explicitly seeded (see API spec), but we have no way to
@@ -268,7 +270,9 @@ class DrakeGymEnv(gym.Env):
         # Note: The output port will be evaluated without fixing the input
         # port.
         observations = self.observation_port.Eval(context)
-        return observations if not return_info else (observations, dict())
+        # Cast to float32 for compatibility with MPS and consistency
+        observations = np.asarray(observations, dtype=np.float32)
+        return observations, {}
 
     def render(self, mode='human'):
         """
