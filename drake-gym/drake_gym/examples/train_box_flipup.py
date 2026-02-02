@@ -1,7 +1,7 @@
 import argparse
 import os
 
-import gym
+import gymnasium as gym
 # `multiprocessing` also provides this method, but empirically `psutil`'s
 # version seems more reliable.
 from psutil import cpu_count

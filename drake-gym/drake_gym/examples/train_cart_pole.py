@@ -2,7 +2,7 @@ import wandb_pre_import_mods_for_bazel
 
 import argparse
 
-import gym
+import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.env_checker import check_env

@@ -1,0 +1,33 @@
+Using cuda device
+Logging to runs/pfdvyfof/PPO_1
+[2K---------------------------------━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m12,234/3,000,000 [0m [ [33m0:00:21[0m < [36m1:24:28[0m , [31m590 it/s[0m ]
+| rollout/           |          |
+|    ep_len_mean     | 5.96     |
+|    ep_rew_mean     | 17.9     |
+| time/              |          |
+|    fps             | 582      |
+|    iterations      | 1        |
+|    time_elapsed    | 21       |
+|    total_timesteps | 12288    |
+---------------------------------
+[2KTraceback (most recent call last):━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+[2K  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 271, in <module>[32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    sys.exit(main())
+[2K  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 263, in main[0m [32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    model.learn(
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/ppo/ppo.py", line 311, in learn32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    return super().learn(
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/on_policy_algorithm.py", line 336, in learn [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    self.train()
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/ppo/ppo.py", line 213, in train32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/policies.py", line 739, in evaluate_actions [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    values = self.value_net(latent_vf)
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    return self._call_impl(*args, **kwargs)
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    return forward_call(*args, **kwargs)
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/torch/nn/modules/linear.py", line 116, in forward32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+    return F.linear(input, self.weight, self.bias)
+[2KKeyboardInterrupt;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]
+[35m   0%[0m [38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m12,282/3,000,000 [0m [ [33m0:00:26[0m < [36m1:24:42[0m , [31m588 it/s[0m ]

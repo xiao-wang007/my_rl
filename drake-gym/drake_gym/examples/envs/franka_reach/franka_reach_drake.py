@@ -629,13 +629,13 @@ def PandaReachEnv(observations="state",
 
                         
     # Define observation space (always use float32 - sufficient for RL and works with MPS)
-    low = np.concatenate(
-        (plant_sim.GetPositionLowerLimits(), plant_sim.GetVelocityLowerLimits()))
-    high = np.concatenate(
-        (plant_sim.GetPositionUpperLimits(), plant_sim.GetVelocityUpperLimits()))
+    # Use -inf/inf bounds to avoid "obs not in observation space" warnings
+    # The simulation can produce values slightly outside physical limits
+    obs_dim = len(plant_sim.GetPositionLowerLimits()) + len(plant_sim.GetVelocityLowerLimits())
     observation_space = gym.spaces.Box(
-        low=np.asarray(low, dtype=np.float32),
-        high=np.asarray(high, dtype=np.float32),
+        low=-np.inf,
+        high=np.inf,
+        shape=(obs_dim,),
         dtype=np.float32
     )
     

@@ -1,0 +1,15 @@
+{"time":"2026-02-02T23:15:31.269484026Z","level":"INFO","msg":"stream: starting","core version":"0.24.1"}
+{"time":"2026-02-02T23:15:31.689814717Z","level":"INFO","msg":"stream: created new stream","id":"pfdvyfof"}
+{"time":"2026-02-02T23:15:31.689849709Z","level":"INFO","msg":"handler: started","stream_id":"pfdvyfof"}
+{"time":"2026-02-02T23:15:31.689958788Z","level":"INFO","msg":"stream: started","id":"pfdvyfof"}
+{"time":"2026-02-02T23:15:31.689997528Z","level":"INFO","msg":"writer: started","stream_id":"pfdvyfof"}
+{"time":"2026-02-02T23:15:31.68999734Z","level":"INFO","msg":"sender: started","stream_id":"pfdvyfof"}
+{"time":"2026-02-02T23:15:31.996869189Z","level":"ERROR","msg":"git repo not found","error":"repository does not exist"}
+{"time":"2026-02-02T23:15:45.611123367Z","level":"WARN","msg":"tensorboard: no root directory","error":"timed out after 10s"}
+{"time":"2026-02-02T23:15:45.61117331Z","level":"INFO","msg":"tensorboard: tracking new log directory","rootDir":{},"logDir":"LocalOrCloudPath(LocalPath=\"/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/runs/pfdvyfof/PPO_1\")","namespace":""}
+{"time":"2026-02-02T23:15:45.611422968Z","level":"INFO","msg":"tensorboard: saving file","fileLocation":"/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/runs/pfdvyfof/PPO_1/events.out.tfevents.1770074135.robotics.27995.0","runPath":"runs/pfdvyfof/PPO_1/events.out.tfevents.1770074135.robotics.27995.0"}
+{"time":"2026-02-02T23:16:01.74806984Z","level":"INFO","msg":"stream: closing","id":"pfdvyfof"}
+{"time":"2026-02-02T23:16:02.161088797Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-02-02T23:16:02.330981722Z","level":"INFO","msg":"handler: closed","stream_id":"pfdvyfof"}
+{"time":"2026-02-02T23:16:02.331081242Z","level":"INFO","msg":"sender: closed","stream_id":"pfdvyfof"}
+{"time":"2026-02-02T23:16:02.331088813Z","level":"INFO","msg":"stream: closed","id":"pfdvyfof"}

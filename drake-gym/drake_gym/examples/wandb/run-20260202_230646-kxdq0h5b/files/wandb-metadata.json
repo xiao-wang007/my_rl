@@ -1,0 +1,47 @@
+{
+  "os":  "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
+  "python":  "CPython 3.10.12",
+  "startedAt":  "2026-02-02T23:06:46.300054Z",
+  "args":  [
+    "--device",
+    "cuda",
+    "--wandb",
+    "--checkpoint_freq",
+    "100000"
+  ],
+  "program":  "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py",
+  "codePath":  "drake-gym/drake_gym/examples/train_franka_reach_PPO.py",
+  "codePathLocal":  "train_franka_reach_PPO.py",
+  "git":  {
+    "remote":  "git@github.com:xiao-wang007/my_rl.git",
+    "commit":  "258b8906f0d626f123fca4cd2a18bc02b0087f91"
+  },
+  "email":  "xwang0505dazzleyou@gmail.com",
+  "root":  "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples",
+  "host":  "robotics",
+  "executable":  "/home/xiao/pyenvs/robotics/bin/python",
+  "cpu_count":  6,
+  "cpu_count_logical":  12,
+  "gpu":  "NVIDIA GeForce GTX 1080 Ti",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "490577010688",
+      "used":  "191788371968"
+    }
+  },
+  "memory":  {
+    "total":  "33584930816"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce GTX 1080 Ti",
+      "memoryTotal":  "11811160064",
+      "cudaCores":  3584,
+      "architecture":  "Pascal",
+      "uuid":  "GPU-170b4273-400b-edc2-8e93-e7760cf748e5"
+    }
+  ],
+  "cudaVersion":  "12.2",
+  "writerId":  "bwcgo1upwmjhk7p05rnha3v5tsjmxwj9"
+}

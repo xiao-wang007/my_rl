@@ -1,0 +1,25 @@
+Using cuda device
+/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/on_policy_algorithm.py:150: UserWarning: You are trying to run PPO on the GPU, but it is primarily intended to run on the CPU when not using a CNN policy (you are using ActorCriticPolicy which should be a MlpPolicy). See https://github.com/DLR-RM/stable-baselines3/issues/1245 for more info. You can pass `device='cpu'` or `export CUDA_VISIBLE_DEVICES=` to force using the CPU.Note: The model will train, but the GPU utilization will be poor and the training might take longer than on CPU.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 265, in <module>
+    sys.exit(main())
+  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 257, in main
+    model.learn(
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/ppo/ppo.py", line 311, in learn
+    return super().learn(
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/on_policy_algorithm.py", line 310, in learn
+    total_timesteps, callback = self._setup_learn(
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/base_class.py", line 423, in _setup_learn
+    self._last_obs = self.env.reset()  # type: ignore[assignment]
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 136, in reset
+    results = [remote.recv() for remote in self.remotes]
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 136, in <listcomp>
+    results = [remote.recv() for remote in self.remotes]
+  File "/usr/lib/python3.10/multiprocessing/connection.py", line 250, in recv
+    buf = self._recv_bytes()
+  File "/usr/lib/python3.10/multiprocessing/connection.py", line 414, in _recv_bytes
+    buf = self._recv(4)
+  File "/usr/lib/python3.10/multiprocessing/connection.py", line 383, in _recv
+    raise EOFError
+EOFError

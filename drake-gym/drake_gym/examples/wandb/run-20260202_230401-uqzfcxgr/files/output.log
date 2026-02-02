@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 265, in <module>
+    sys.exit(main())
+  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 222, in main
+    env = make_vec_env(
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/env_util.py", line 125, in make_vec_env
+    vec_env = vec_env_cls([make_env(i + start_index) for i in range(n_envs)], **vec_env_kwargs)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 118, in __init__
+    observation_space, action_space = self.remotes[0].recv()
+  File "/usr/lib/python3.10/multiprocessing/connection.py", line 250, in recv
+    buf = self._recv_bytes()
+  File "/usr/lib/python3.10/multiprocessing/connection.py", line 414, in _recv_bytes
+    buf = self._recv(4)
+  File "/usr/lib/python3.10/multiprocessing/connection.py", line 379, in _recv
+    chunk = read(handle, remaining)
+ConnectionResetError: [Errno 104] Connection reset by peer

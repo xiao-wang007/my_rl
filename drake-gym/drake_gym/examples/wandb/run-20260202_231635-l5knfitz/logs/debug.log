@@ -1,0 +1,283 @@
+2026-02-02 23:16:35,574 INFO    MainThread:29026 [wandb_setup.py:_flush():81] Current SDK version is 0.24.1
+2026-02-02 23:16:35,574 INFO    MainThread:29026 [wandb_setup.py:_flush():81] Configure stats pid to 29026
+2026-02-02 23:16:35,574 INFO    MainThread:29026 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-02-02 23:16:35,574 INFO    MainThread:29026 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/wandb/run-20260202_231635-l5knfitz/logs/debug.log
+2026-02-02 23:16:35,574 INFO    MainThread:29026 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/wandb/run-20260202_231635-l5knfitz/logs/debug-internal.log
+2026-02-02 23:16:35,575 INFO    MainThread:29026 [wandb_init.py:init():844] calling init triggers
+2026-02-02 23:16:35,575 INFO    MainThread:29026 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'policy_type': 'MlpPolicy', 'total_timesteps': 500000.0, 'env_name': 'panda-reach-v0', 'env_time_limit': 10, 'local_log_dir': 'logs/panda_reach_ppo', 'observations': 'state', 'net_arch': [64, 64], 'custom_net': False, '_wandb': {'code_path': 'code/drake-gym/drake_gym/examples/train_franka_reach_PPO.py'}}
+2026-02-02 23:16:35,575 INFO    MainThread:29026 [wandb_init.py:init():892] starting backend
+2026-02-02 23:16:35,787 INFO    MainThread:29026 [wandb_init.py:init():895] sending inform_init request
+2026-02-02 23:16:35,790 INFO    MainThread:29026 [wandb_init.py:init():903] backend started and connected
+2026-02-02 23:16:35,791 INFO    MainThread:29026 [wandb_init.py:init():973] updated telemetry
+2026-02-02 23:16:35,795 INFO    MainThread:29026 [wandb_init.py:init():997] communicating run to backend with 90.0 second timeout
+2026-02-02 23:16:36,376 INFO    MainThread:29026 [wandb_init.py:init():1042] starting run threads in backend
+2026-02-02 23:16:36,507 INFO    MainThread:29026 [wandb_run.py:_console_start():2529] atexit reg
+2026-02-02 23:16:36,507 INFO    MainThread:29026 [wandb_run.py:_redirect():2377] redirect: wrap_raw
+2026-02-02 23:16:36,507 INFO    MainThread:29026 [wandb_run.py:_redirect():2446] Wrapping output streams.
+2026-02-02 23:16:36,507 INFO    MainThread:29026 [wandb_run.py:_redirect():2469] Redirects installed.
+2026-02-02 23:16:36,509 INFO    MainThread:29026 [wandb_init.py:init():1082] run started, returning control to user process
+2026-02-02 23:16:39,942 INFO    MainThread:29026 [wandb_run.py:_tensorboard_callback():1615] tensorboard callback: runs/l5knfitz/PPO_1, True
+2026-02-02 23:16:39,945 INFO    MainThread:29026 [wandb_run.py:_config_callback():1404] config_cb None None {'algo': 'PPO', 'policy_class': "<class 'stable_baselines3.common.policies.ActorCriticPolicy'>", 'device': 'cpu', 'verbose': 1, 'policy_kwargs': '{}', 'num_timesteps': 0, '_total_timesteps': 3000000.0, '_num_timesteps_at_start': 0, 'seed': 'None', 'action_noise': 'None', 'start_time': 1770074199939011015, 'learning_rate': 0.0003, 'tensorboard_log': 'runs/l5knfitz', '_last_obs': '[[ 8.4685212e-01 -1.3291906e+00  9.7275153e-02 -4.3378824e-01\n  -5.3148860e-01  7.0320022e-01  7.7027112e-01  0.0000000e+00\n   0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00]\n [-2.4595077e+00 -3.4404105e-01  2.1474121e+00 -1.9996349e+00\n   5.1490885e-01  3.0293281e+00 -2.8646727e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00]\n [-2.3818107e+00 -1.6267881e+00  2.3910050e+00 -2.7168601e+00\n   2.4311926e+00  3.3497765e+00 -1.6379330e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00]\n [ 1.1478953e+00 -1.4095513e+00 -2.8723731e+00 -2.0204072e+00\n   1.3427291e+00  3.3896118e-01  4.1866717e-01  0.0000000e+00\n   0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00]\n [-1.9236114e+00 -3.4540722e-01 -2.5737202e+00 -8.1651998e-01\n   5.2595951e-05  3.6325653e+00  2.8208258e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00]\n [ 1.3762388e+00  2.9254529e-01  1.5417432e+00 -4.5020616e-01\n   6.6564065e-01  2.6486535e+00  8.9301139e-01  0.0000000e+00\n   0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00\n   0.0000000e+00  0.0000000e+00]]', '_last_episode_starts': '[ True  True  True  True  True  True]', '_last_original_obs': 'None', '_episode_num': 0, 'use_sde': 'False', 'sde_sample_freq': -1, '_current_progress_remaining': 1.0, '_stats_window_size': 100, 'ep_info_buffer': 'deque([], maxlen=100)', 'ep_success_buffer': 'deque([], maxlen=100)', '_n_updates': 0, '_custom_logger': 'False', 'env': '<stable_baselines3.common.vec_env.subproc_vec_env.SubprocVecEnv object at 0x780640beb070>', '_vec_normalize_env': 'None', 'observation_space': 'Box(-inf, inf, (14,), float32)', 'action_space': 'Box([-2.175 -2.175 -2.175 -2.175 -2.61  -2.61  -2.61 ], [2.175 2.175 2.175 2.175 2.61  2.61  2.61 ], (7,), float32)', 'n_envs': 6, 'n_steps': 2048, 'gamma': 0.99, 'gae_lambda': 0.95, 'ent_coef': 0.0, 'vf_coef': 0.5, 'max_grad_norm': 0.5, 'rollout_buffer_class': "<class 'stable_baselines3.common.buffers.RolloutBuffer'>", 'rollout_buffer_kwargs': '{}', 'batch_size': 64, 'n_epochs': 10, 'clip_range': '<function get_schedule_fn.<locals>.<lambda> at 0x78062c2dbac0>', 'clip_range_vf': 'None', 'normalize_advantage': 'True', 'target_kl': 'None', 'lr_schedule': '<function get_schedule_fn.<locals>.<lambda> at 0x780640a85b40>', 'rollout_buffer': '<stable_baselines3.common.buffers.RolloutBuffer object at 0x7806421e9420>', 'policy': 'ActorCriticPolicy(\n  (features_extractor): FlattenExtractor(\n    (flatten): Flatten(start_dim=1, end_dim=-1)\n  )\n  (pi_features_extractor): FlattenExtractor(\n    (flatten): Flatten(start_dim=1, end_dim=-1)\n  )\n  (vf_features_extractor): FlattenExtractor(\n    (flatten): Flatten(start_dim=1, end_dim=-1)\n  )\n  (mlp_extractor): MlpExtractor(\n    (policy_net): Sequential(\n      (0): Linear(in_features=14, out_features=64, bias=True)\n      (1): Tanh()\n      (2): Linear(in_features=64, out_features=64, bias=True)\n      (3): Tanh()\n    )\n    (value_net): Sequential(\n      (0): Linear(in_features=14, out_features=64, bias=True)\n      (1): Tanh()\n      (2): Linear(in_features=64, out_features=64, bias=True)\n      (3): Tanh()\n    )\n  )\n  (action_net): Linear(in_features=64, out_features=7, bias=True)\n  (value_net): Linear(in_features=64, out_features=1, bias=True)\n)', '_logger': '<stable_baselines3.common.logger.Logger object at 0x78062c4e8580>'}
+2026-02-02 23:16:45,714 INFO    wandb-AsyncioManager-main:29026 [service_client.py:_forward_responses():94] Reached EOF.
+2026-02-02 23:16:45,714 INFO    wandb-AsyncioManager-main:29026 [mailbox.py:close():154] Closing mailbox, abandoning 1 handles.
+2026-02-02 23:16:45,787 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:45,889 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:45,994 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,096 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,121 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,132 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,142 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,149 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,155 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,175 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,175 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,175 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,175 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,193 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,193 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,196 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,196 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,203 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,203 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-02 23:16:46,207 ERROR   wandb-AsyncioManager-main:29026 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost

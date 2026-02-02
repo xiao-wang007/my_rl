@@ -1,0 +1,42 @@
+Using cuda device
+/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/on_policy_algorithm.py:150: UserWarning: You are trying to run PPO on the GPU, but it is primarily intended to run on the CPU when not using a CNN policy (you are using ActorCriticPolicy which should be a MlpPolicy). See https://github.com/DLR-RM/stable-baselines3/issues/1245 for more info. You can pass `device='cpu'` or `export CUDA_VISIBLE_DEVICES=` to force using the CPU.Note: The model will train, but the GPU utilization will be poor and the training might take longer than on CPU.
+  warnings.warn(
+Logging to runs/oyh2s8rp/PPO_1
+[2K---------------------------------━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m12,270/3,000,000 [0m [ [33m0:00:20[0m < [36m1:22:36[0m , [31m603 it/s[0m ]
+| rollout/           |          |
+|    ep_len_mean     | 4.53     |
+|    ep_rew_mean     | 7.18     |
+| time/              |          |
+|    fps             | 595      |
+|    iterations      | 1        |
+|    time_elapsed    | 20       |
+|    total_timesteps | 12288    |
+---------------------------------
+[2KTraceback (most recent call last):━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+[2K  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 265, in <module>15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    sys.exit(main())
+[2K  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 257, in main[32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    model.learn(
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/ppo/ppo.py", line 311, in learn,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    return super().learn(
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/on_policy_algorithm.py", line 323, in learn [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    continue_training = self.collect_rollouts(self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps)
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/on_policy_algorithm.py", line 218, in  [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+collect_rollouts
+    new_obs, rewards, dones, infos = env.step(clipped_actions)
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/vec_env/base_vec_env.py", line 206, in step [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    return self.step_wait()
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 128, in m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+step_wait
+    results = [remote.recv() for remote in self.remotes]
+[2K  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 128, in m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+<listcomp>
+    results = [remote.recv() for remote in self.remotes]
+[2K  File "/usr/lib/python3.10/multiprocessing/connection.py", line 250, in recv━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    buf = self._recv_bytes()
+[2K  File "/usr/lib/python3.10/multiprocessing/connection.py", line 414, in _recv_bytes━━━━━━━━━━━━━━━━━[0m [32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    buf = self._recv(4)
+[2K  File "/usr/lib/python3.10/multiprocessing/connection.py", line 379, in _recv━━━━━━━━━━━━━━━━━━━━━━━[0m [32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+    chunk = read(handle, remaining)
+[2KKeyboardInterrupt;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]
+[35m   1%[0m [38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [32m15,354/3,000,000 [0m [ [33m0:00:31[0m < [36m1:43:04[0m , [31m483 it/s[0m ]

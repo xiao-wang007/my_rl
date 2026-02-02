@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 265, in <module>
+    sys.exit(main())
+  File "/home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py", line 244, in main
+    model = PPO.load(
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/base_class.py", line 680, in load
+    data, params, pytorch_variables = load_from_zip_file(
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/save_util.py", line 434, in load_from_zip_file
+    data = json_to_data(json_data, custom_objects=custom_objects)
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/stable_baselines3/common/save_util.py", line 165, in json_to_data
+    deserialized_object = cloudpickle.loads(base64_object)
+ModuleNotFoundError: No module named 'numpy._core.numeric'

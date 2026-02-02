@@ -1,0 +1,15 @@
+2026-02-02 23:03:41,206 INFO    MainThread:16882 [wandb_setup.py:_flush():81] Current SDK version is 0.24.1
+2026-02-02 23:03:41,206 INFO    MainThread:16882 [wandb_setup.py:_flush():81] Configure stats pid to 16882
+2026-02-02 23:03:41,207 INFO    MainThread:16882 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-02-02 23:03:41,207 INFO    MainThread:16882 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/wandb/run-20260202_230341-g90rq5vl/logs/debug.log
+2026-02-02 23:03:41,207 INFO    MainThread:16882 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /home/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/wandb/run-20260202_230341-g90rq5vl/logs/debug-internal.log
+2026-02-02 23:03:41,208 ERROR   MainThread:16882 [util.py:get_module():240] Error importing optional module tensorboard
+Traceback (most recent call last):
+  File "/home/xiao/pyenvs/robotics/lib/python3.10/site-packages/wandb/util.py", line 233, in get_module
+    return import_module(name)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1004, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'tensorboard'
