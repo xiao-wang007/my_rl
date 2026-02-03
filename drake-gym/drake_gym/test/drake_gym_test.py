@@ -1,6 +1,6 @@
 import unittest
 
-import gym
+import gymnasium as gym
 import numpy as np
 import stable_baselines3.common.env_checker
 from stable_baselines3.common.env_util import make_vec_env
