@@ -179,6 +179,7 @@ def make_sim(generator,
         ee for the task.
         But do option 1 first. Then later implement option 2. Just to 
         compare'''
+    
 
     # joint velocities sent to the agent
     ''' ## when to use Multiplexer()
@@ -197,12 +198,98 @@ def make_sim(generator,
         exporting the input port for RL agent.
     '''
 
-    jvel_actuation_ = builder.AddSystem(PassThrough(7))
-    builder.Connect(jvel_actuation_.get_output_port(),
-                    plant.get_actuation_input_port(agent)) # agent is a model instance
+    # jvel_actuation_ = builder.AddSystem(PassThrough(7))
+    # builder.Connect(jvel_actuation_.get_output_port(),
+    #                 plant.get_actuation_input_port(agent)) # agent is a model instance
     
-    # Export for RL agent
-    builder.ExportInput(jvel_actuation_.get_input_port(), "actions_jnt_vel")
+    # # Export for RL agent
+    # builder.ExportInput(jvel_actuation_.get_input_port(), "actions_jnt_vel")
+
+    ######################### Velocity Controller
+    # Converts desired joint velocities (RL action) to joint torques
+    class VelocityTrackingController(LeafSystem):
+        """
+        PD controller that tracks desired joint velocities.
+        
+        Computes: τ = Kd * (v_desired - v_current) + gravity_compensation
+        
+        The gravity compensation term helps maintain position when v_desired = 0.
+        """
+        def __init__(self, plant, model_instance, Kd=None):
+            LeafSystem.__init__(self)
+            self.plant = plant
+            self.model_instance = model_instance
+            self.nv = plant.num_velocities()
+            self.nq = plant.num_positions()
+            self.na = plant.num_actuators()
+            
+            # Default gains (tuned for Panda)
+            if Kd is None:
+                # Higher gains for larger joints
+                self.Kd = np.array([50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
+            else:
+                self.Kd = np.array(Kd)
+            
+            # Input ports
+            self.DeclareVectorInputPort("desired_velocity", self.nv)
+            self.DeclareVectorInputPort("state", self.nq + self.nv)
+            
+            # Output port for torques
+            self.DeclareVectorOutputPort("torque", self.na, self.CalcTorque)
+            
+            # Create a context for gravity compensation calculations
+            self.plant_context = plant.CreateDefaultContext()
+        
+        def CalcTorque(self, context, output):
+            # Get desired velocity from RL action
+            v_desired = self.get_input_port(0).Eval(context)
+            
+            # Get current state
+            state = self.get_input_port(1).Eval(context)
+            q_current = state[:self.nq]
+            v_current = state[self.nq:]
+            
+            # Velocity error
+            v_error = v_desired - v_current
+            
+            # PD control (D term only for velocity tracking)
+            tau_pd = self.Kd * v_error
+            
+            # Gravity compensation
+            self.plant.SetPositions(self.plant_context, q_current)
+            tau_gravity = self.plant.CalcGravityGeneralizedForces(self.plant_context)
+            
+            # Total torque = PD + gravity compensation
+            tau = tau_pd - tau_gravity  # negative because gravity is in the opposite direction
+            
+            # Clamp to effort limits
+            effort_limits = np.array([87, 87, 87, 87, 12, 12, 12])
+            tau = np.clip(tau, -effort_limits, effort_limits)
+            
+            output.SetFromVector(tau)
+    
+    # Create velocity controller
+    velocity_controller = builder.AddSystem(
+        VelocityTrackingController(plant, agent, Kd=[50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
+    )
+    velocity_controller.set_name("velocity_controller")
+    
+    # Connect desired velocity input (from RL agent)
+    desired_vel_port = builder.ExportInput(
+        velocity_controller.get_input_port(0), "actions_jnt_vel"
+    )
+    
+    # Connect current state to controller
+    builder.Connect(
+        plant.get_state_output_port(),
+        velocity_controller.get_input_port(1)
+    )
+    
+    # Connect controller output (torques) to plant actuation
+    builder.Connect(
+        velocity_controller.get_output_port(),
+        plant.get_actuation_input_port(agent)
+    )
 
     ######################### Observer
     class observation_publisher(LeafSystem):
