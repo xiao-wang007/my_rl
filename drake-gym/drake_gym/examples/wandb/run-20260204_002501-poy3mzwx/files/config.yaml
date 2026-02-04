@@ -1,0 +1,218 @@
+_current_progress_remaining:
+    value: 1
+_custom_logger:
+    value: "False"
+_episode_num:
+    value: 0
+_last_episode_starts:
+    value: '[ True  True  True  True  True  True]'
+_last_obs:
+    value: |-
+        [[ 0.8757323  -0.19731018 -0.960603   -1.8483001   0.20206988  1.9117517
+           2.0087824   0.          0.          0.          0.          0.
+           0.          0.        ]
+         [ 1.0554094   0.354801   -0.70370215 -1.6414237   0.47321013  2.5511227
+           2.4359438   0.          0.          0.          0.          0.
+           0.          0.        ]
+         [ 0.4334119   0.2857767  -0.7455065  -1.6282928   0.73308223  1.7871248
+           1.8910947   0.          0.          0.          0.          0.
+           0.          0.        ]
+         [ 0.82938576  0.47464612 -1.2128619  -2.4275749   0.24707873  2.0427072
+           2.0342085   0.          0.          0.          0.          0.
+           0.          0.        ]
+         [ 0.9091434   0.05754858 -0.9023324  -1.9282752   0.74338454  1.949762
+           2.3326263   0.          0.          0.          0.          0.
+           0.          0.        ]
+         [ 1.4105588  -0.13591528 -1.1485988  -1.6151912   0.7034234   1.9597315
+           1.9497706   0.          0.          0.          0.          0.
+           0.          0.        ]]
+_last_original_obs:
+    value: None
+_logger:
+    value: <stable_baselines3.common.logger.Logger object at 0x158d54c50>
+_n_updates:
+    value: 0
+_num_timesteps_at_start:
+    value: 0
+_stats_window_size:
+    value: 100
+_total_timesteps:
+    value: 3e+06
+_vec_normalize_env:
+    value: None
+_wandb:
+    value:
+        cli_version: 0.24.1
+        code_path: code/drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+        e:
+            yw9n4aqooaar4ni72jldb4um0xvgdt0n:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 16
+                    memoryGb: 48
+                    name: Apple M4 Pro
+                    pcpuCores: 8
+                    ramTotalBytes: "51539607552"
+                args:
+                    - --net_arch
+                    - "256"
+                    - "256"
+                    - --device
+                    - cpu
+                    - --checkpoint_freq
+                    - "50000"
+                    - --wandb
+                codePath: drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+                codePathLocal: train_franka_reach_PPO.py
+                cpu_count: 12
+                cpu_count_logical: 12
+                disk:
+                    /:
+                        total: "494384795648"
+                        used: "233120223232"
+                email: xwang0505dazzleyou@gmail.com
+                executable: /Users/xiao/miniforge3/envs/robotics/bin/python
+                git:
+                    commit: 301073d8e36e25de5833d41c0527e9e41b01e840
+                    remote: git@github.com:xiao-wang007/my_rl.git
+                host: Mac.lan
+                memory:
+                    total: "51539607552"
+                os: macOS-26.2-arm64-arm-64bit
+                program: /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+                python: CPython 3.12.10
+                root: /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples
+                startedAt: "2026-02-04T00:25:01.845966Z"
+                writerId: yw9n4aqooaar4ni72jldb4um0xvgdt0n
+        m: []
+        python_version: 3.12.10
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 16
+                - 22
+                - 35
+            "4": 3.12.10
+            "5": 0.24.1
+            "12": 0.24.1
+            "13": darwin-arm64
+action_noise:
+    value: None
+action_space:
+    value: Box([-2.175 -2.175 -2.175 -2.175 -2.61  -2.61  -2.61 ], [2.175 2.175 2.175 2.175 2.61  2.61  2.61 ], (7,), float32)
+algo:
+    value: PPO
+batch_size:
+    value: 64
+clip_range:
+    value: FloatSchedule(ConstantSchedule(val=0.2))
+clip_range_vf:
+    value: None
+custom_net:
+    value: false
+device:
+    value: cpu
+ent_coef:
+    value: 0
+env:
+    value: <stable_baselines3.common.vec_env.subproc_vec_env.SubprocVecEnv object at 0x143d5d820>
+env_name:
+    value: panda-reach-v0
+env_time_limit:
+    value: 10
+ep_info_buffer:
+    value: deque([], maxlen=100)
+ep_success_buffer:
+    value: deque([], maxlen=100)
+gae_lambda:
+    value: 0.95
+gamma:
+    value: 0.99
+learning_rate:
+    value: 0.0003
+local_log_dir:
+    value: logs/panda_reach_ppo
+lr_schedule:
+    value: FloatSchedule(ConstantSchedule(val=0.0003))
+max_grad_norm:
+    value: 0.5
+n_envs:
+    value: 6
+n_epochs:
+    value: 10
+n_steps:
+    value: 2048
+net_arch:
+    value:
+        - 64
+        - 64
+normalize_advantage:
+    value: "True"
+num_timesteps:
+    value: 0
+observation_space:
+    value: Box(-inf, inf, (14,), float32)
+observations:
+    value: state
+policy:
+    value: |-
+        ActorCriticPolicy(
+          (features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (pi_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (vf_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (mlp_extractor): MlpExtractor(
+            (policy_net): Sequential(
+              (0): Linear(in_features=14, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+            (value_net): Sequential(
+              (0): Linear(in_features=14, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+          )
+          (action_net): Linear(in_features=64, out_features=7, bias=True)
+          (value_net): Linear(in_features=64, out_features=1, bias=True)
+        )
+policy_class:
+    value: <class 'stable_baselines3.common.policies.ActorCriticPolicy'>
+policy_kwargs:
+    value: '{}'
+policy_type:
+    value: MlpPolicy
+rollout_buffer:
+    value: <stable_baselines3.common.buffers.RolloutBuffer object at 0x143759b80>
+rollout_buffer_class:
+    value: <class 'stable_baselines3.common.buffers.RolloutBuffer'>
+rollout_buffer_kwargs:
+    value: '{}'
+sde_sample_freq:
+    value: -1
+seed:
+    value: None
+start_time:
+    value: 1770164705162215000
+target_kl:
+    value: None
+tensorboard_log:
+    value: runs/poy3mzwx
+total_timesteps:
+    value: 500000
+use_sde:
+    value: "False"
+verbose:
+    value: 1
+vf_coef:
+    value: 0.5
