@@ -50,12 +50,15 @@ def main():
         help="Render with Meshcat visualization",
     )
     parser.add_argument(
-        "--deterministic",
+        "--stochastic",
         action="store_true",
-        default=True,
-        help="Use deterministic actions (no exploration noise)",
+        default=False,
+        help="Use stochastic actions (with exploration noise). Default is deterministic.",
     )
     args = parser.parse_args()
+    
+    # Deterministic is the opposite of stochastic
+    deterministic = not args.stochastic
 
     # Check if model exists
     if not os.path.exists(args.model_path):
@@ -99,7 +102,7 @@ def main():
 
         while not terminated and not truncated:
             # Get action from policy
-            action, _ = model.predict(obs, deterministic=args.deterministic)
+            action, _ = model.predict(obs, deterministic=deterministic)
             
             # Step environment
             obs, reward, terminated, truncated, info = env.step(action)
