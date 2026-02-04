@@ -20,13 +20,27 @@ sys.path.insert(0, _DRAKE_GYM_ROOT)
 import gymnasium as gym
 import numpy as np
 from stable_baselines3 import PPO
-from pydrake.all import StartMeshcat
+from pydrake.all import StartMeshcat, Rgba, RigidTransform
+from pydrake.geometry import Sphere
 
 # Register the environment
 gym.envs.register(
     id="panda-reach-v0",
     entry_point="envs.franka_reach.franka_reach_drake:PandaReachEnv",
 )
+
+
+def visualize_target(meshcat, goal_pos, radius=0.05):
+    """Visualize target position as a red sphere in Meshcat."""
+    meshcat.SetObject(
+        "target",
+        Sphere(radius),
+        Rgba(1.0, 0.0, 0.0, 0.7)  # Red, semi-transparent
+    )
+    meshcat.SetTransform(
+        "target",
+        RigidTransform(goal_pos)
+    )
 
 
 def main():
@@ -94,6 +108,12 @@ def main():
         truncated = False
         total_reward = 0
         step_count = 0
+
+        # Visualize target position after reset (goal gets randomized)
+        if args.render and hasattr(env.unwrapped, 'goal_state'):
+            goal_pos = env.unwrapped.goal_state.goal_pos
+            visualize_target(meshcat, goal_pos)
+            print(f"Target position: {goal_pos}")
 
         print(f"\n=== Episode {episode + 1}/{args.episodes} ===")
 

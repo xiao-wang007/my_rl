@@ -664,20 +664,26 @@ def set_home(simulator, diagram_context, seed, goal_state):
     #     mass = body.get_mass(plant.CreateDefaultContext()) 
     #     body.SetMass(plant_context, mass+mass_offset)
 
-    ''' #TODO: randomize the target of ee using FK here; 
-        To think: does manipulability matter here? it should be used to
-        quantify how well the robot can reach certain poses? could be useful'''
-    q_random = np.random.uniform(q_min, q_max)
-    plant.SetPositions(plant_context, q_random)
+    ''' Randomize the target position using FK on a random config '''
+    # 1. First, sample a random config for the GOAL (not the robot's starting config)
+    q_goal = np.random.uniform(q_min, q_max)
+    plant.SetPositions(plant_context, q_goal)
     ee_frame = plant.GetFrameByName("panda_link8")
-    p_ee_random = ee_frame.CalcPoseInWorld(plant_context).translation()
+    p_ee_goal = ee_frame.CalcPoseInWorld(plant_context).translation()
 
-    rot_ee_random = ee_frame.CalcPoseInWorld(plant_context).rotation().matrix()
-    rx_random = rot_ee_random[:, 0].flatten()  
-    ry_random = rot_ee_random[:, 1].flatten()
+    rot_ee_goal = ee_frame.CalcPoseInWorld(plant_context).rotation().matrix()
+    rx_goal = rot_ee_goal[:, 0].flatten()  
+    ry_goal = rot_ee_goal[:, 1].flatten()
 
-    goal_state.goal_pos = p_ee_random
-    goal_state.goal_r1r2 = np.concatenate([rx_random, ry_random])
+    goal_state.goal_pos = p_ee_goal
+    goal_state.goal_r1r2 = np.concatenate([rx_goal, ry_goal])
+
+    # 2. Now set the robot to its STARTING position (different from goal!)
+    q_init = np.array([home_positions[f'panda_joint{i+1}'] for i in range(7)])
+    # v_init = np.array([home_velocities[f'panda_joint{i+1}'] for i in range(7)])
+    v_init = np.zeros(7) # start from static for now
+    plant.SetPositions(plant_context, q_init)
+    plant.SetVelocities(plant_context, v_init)
 
 def PandaReachEnv(observations="state",
                   meshcat=None,
@@ -740,6 +746,7 @@ def PandaReachEnv(observations="state",
     # Expose parameters that could be useful for learning
     env.time_step = gym_time_step
     env.sim_time_step = sim_time_step
+    env.goal_state = goal_state  # Expose for visualization in test scripts
 
     return env
 
