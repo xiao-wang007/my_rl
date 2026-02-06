@@ -205,220 +205,38 @@ def make_sim(generator,
     # # Export for RL agent
     # builder.ExportInput(jvel_actuation_.get_input_port(), "actions_jnt_vel")
 
-    ######################### Velocity Controller
-    # Converts desired joint velocities (RL action) to joint torques
-    class VelocityTrackingController(LeafSystem):
-        """
-        PD controller that tracks desired joint velocities.
-        
-        Computes: τ = Kd * (v_desired - v_current) + gravity_compensation
-        
-        The gravity compensation term helps maintain position when v_desired = 0.
-        """
-        def __init__(self, plant, model_instance, Kd=None):
-            LeafSystem.__init__(self)
-            self.plant = plant
-            self.model_instance = model_instance
-            self.nv = plant.num_velocities()
-            self.nq = plant.num_positions()
-            self.na = plant.num_actuators()
-            
-            # Default gains (tuned for Panda)
-            if Kd is None:
-                # Higher gains for larger joints
-                self.Kd = np.array([50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
-            else:
-                self.Kd = np.array(Kd)
-            
-            # Input ports
-            self.DeclareVectorInputPort("desired_velocity", self.nv)
-            self.DeclareVectorInputPort("state", self.nq + self.nv)
-            
-            # Output port for torques
-            self.DeclareVectorOutputPort("torque", self.na, self.CalcTorque)
-            
-            # Create a context for gravity compensation calculations
-            self.plant_context = plant.CreateDefaultContext()
-        
-        def CalcTorque(self, context, output):
-            # Get desired velocity from RL action
-            v_desired = self.get_input_port(0).Eval(context)
-            
-            # Get current state
-            state = self.get_input_port(1).Eval(context)
-            q_current = state[:self.nq]
-            v_current = state[self.nq:]
-            
-            # Velocity error
-            v_error = v_desired - v_current
-            
-            # PD control (D term only for velocity tracking)
-            tau_pd = self.Kd * v_error
-            
-            # Gravity compensation
-            self.plant.SetPositions(self.plant_context, q_current)
-            tau_gravity = self.plant.CalcGravityGeneralizedForces(self.plant_context)
-            
-            # Total torque = PD + gravity compensation
-            tau = tau_pd - tau_gravity  # negative because gravity is in the opposite direction
-            
-            # Clamp to effort limits
-            effort_limits = np.array([87, 87, 87, 87, 12, 12, 12])
-            tau = np.clip(tau, -effort_limits, effort_limits)
-            
-            output.SetFromVector(tau)
-    
     # Create velocity controller
     velocity_controller = builder.AddSystem(
         VelocityTrackingController(plant, agent, Kd=[50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
     )
     velocity_controller.set_name("velocity_controller")
-    
+
     # Connect desired velocity input (from RL agent)
     desired_vel_port = builder.ExportInput(
         velocity_controller.get_input_port(0), "actions_jnt_vel"
     )
-    
+
     # Connect current state to controller
     builder.Connect(
         plant.get_state_output_port(),
         velocity_controller.get_input_port(1)
     )
-    
+
     # Connect controller output (torques) to plant actuation
     builder.Connect(
         velocity_controller.get_output_port(),
         plant.get_actuation_input_port(agent)
     )
 
-    ######################### Observer
-    class observation_publisher(LeafSystem):
-        '''
-        For observation, use r1, r2 for learning end-effector orientation. But quaternion is
-        used for computing the reward in orientation since no learning there.
-        
-        :var might: Description
-        :var narrow: Description
-        :var improves: Description
-        :var handle: Description
-        '''
-
-        def __init__(self, noise=False, goal_state=None):
-            LeafSystem.__init__(self)
-            self.Ns = plant.num_multibody_states()
-            self.goal_state = goal_state  # Store reference to shared goal
-            self.DeclareVectorInputPort("plant_states", self.Ns)
-            self.DeclareVectorOutputPort("panda_joint_obs", self.Ns, self.CalcObs1)
-            self.DeclareVectorOutputPort("ee_pose_obs", 7, self.CalcObs2)  # pos(3) + [r1, r2](6)
-            self.DeclareVectorOutputPort("ee_pose_goal", 7, self.CalcObsGoal)
-            self.noise = noise
-            
-            # Cache frame references
-            self.ee_frame = plant.GetFrameByName("panda_link8")
-            self.base_frame = plant.world_frame()
-
-        def CalcObs1(self, context, output):
-            plant_state = self.get_input_port(0).Eval(context)
-            if self.noise:
-                plant_state += np.random.uniform(low=-0.01, high=0.01, size=self.Ns)
-            output.SetFromVector(plant_state)
-        
-        def CalcObs2(self, context, output):
-            # Get plant state and set positions in plant context
-            plant_state = self.get_input_port(0).Eval(context)
-            q = plant_state[:plant.num_positions()]
-            
-            # Use the plant_compute for FK calculations
-            plant_compute.SetPositions(plant_compute_context, q)
-            X_WE = plant_compute.CalcRelativeTransform(
-                plant_compute_context,
-                plant_compute.world_frame(),
-                plant_compute.GetFrameByName("panda_link8"))
-            
-            # Extract position and quaternion
-            pos = X_WE.translation()
-            rx = X_WE.rotation().matrix()[:, 0].flatten()  
-            ry = X_WE.rotation().matrix()[:, 1].flatten()
-            
-            if self.noise:
-                pos += np.random.uniform(low=-0.005, high=0.005, size=3)
-
-                rx += np.random.uniform(low=-0.01, high=0.01, size=3)
-                ry += np.random.uniform(low=-0.01, high=0.01, size=3)
-
-                # re-normalize r1 and r2 to ensure othogonality after noise addition
-                rx /= np.linalg.norm(rx)
-                ry /= np.linalg.norm(ry)
-
-                # re-orthogonalize r2 w.r.t. r1
-                ry = ry -np.dot(ry, rx) * rx
-                ry /= np.linalg.norm(ry)
-
-            ee_pose = np.concatenate([pos, rx, ry])
-            output.SetFromVector(ee_pose)
-
-        # TODO: this function not needed for global policy
-        def CalcObsGoal(self, context, output):
-            goal = np.array(self.goal_state.goal_pos.tolist() + 
-                            self.goal_state.goal_r1r2.tolist())
-            output.SetFromVector(goal)
-        
-    obs_pub = builder.AddSystem(observation_publisher(noise=obs_noise, goal_state=goal_state))
+    obs_pub = builder.AddSystem(ObserverSystem(plant_sim=plant, plant_compute=plant_compute, 
+                                               plant_compute_context=plant_compute_context, 
+                                               noise=obs_noise, goal_state=goal_state))
 
     builder.Connect(plant.get_state_output_port(), obs_pub.get_input_port(0))
     builder.ExportOutput(obs_pub.get_output_port(0), "observations_jnt_states")
     builder.ExportOutput(obs_pub.get_output_port(1), "observations_ee_pose")
     builder.ExportOutput(obs_pub.get_output_port(2), "goal_ee_pose")
 
-    class RewardSystem(LeafSystem):
-        def __init__(self, Ns, 
-                     plant_compute, plant_compute_context, composite_reward,
-                     goal_state):
-            LeafSystem.__init__(self)
-            self.plant = plant_compute
-            self.plant_context = plant_compute_context
-            self.composite_reward = composite_reward
-            self.goal_state = goal_state  # Shared mutable goal
-            
-            # Get reward component names for output ordering
-            self.reward_names = [c['name'] for c in composite_reward.components]
-            self.num_rewards = len(self.reward_names)
-
-            self.DeclareVectorInputPort("state", Ns)
-            self.DeclareVectorOutputPort("reward", 1, self.CalcReward)
-
-            # Output port for individual reward components (order matches self.reward_names)
-            # TODO: probably use abstract vector output for mixed data types for the breakdown
-            #       such as dict with names and values: reaching: 0.8
-            self.DeclareVectorOutputPort("reward_breakdown", self.num_rewards, self.CalcRewardBreakdown)
-        
-        def _compute_rewards(self, context):
-            """Compute rewards and return (total, breakdown_dict)."""
-            state = self.get_input_port(0).Eval(context)
-
-            # set positions in plant context
-            qs = state[:self.plant.num_positions()]
-            self.plant.SetPositions(self.plant_context, qs)
-
-            total, breakdown = self.composite_reward(
-                state=state,
-                target_pos=self.goal_state.goal_pos,
-                target_r1r2=self.goal_state.goal_r1r2,
-                plant=self.plant,
-                plant_context=self.plant_context,
-            )
-            return total, breakdown
-
-        def CalcReward(self, context, output):
-            total, _ = self._compute_rewards(context)
-            output[0] = total
-        
-        def CalcRewardBreakdown(self, context, output):
-            """Output individual rewards in order of self.reward_names."""
-            _, breakdown = self._compute_rewards(context)
-            for i, name in enumerate(self.reward_names):
-                output[i] = breakdown.get(name, 0.0) 
-        
     # Create composite reward with reaching reward function
     composite_reward = CompositeReward()
     composite_reward.add_reward('reaching', reaching_reward, weight=1.0)
@@ -462,47 +280,6 @@ def make_sim(generator,
                         rgbd_camera.query_object_input_port())
         builder.ExportOutput(rgbd_camera.color_image_output_port(), "camera1_stream") 
 
-    ######################### Disturbance
-    class DisturbanceGenerator(LeafSystem):
-        def __init__(self, plant, force_mag, period):
-            ''' the original example is cartpole, the disturbance force 
-                is applied to the cart body along the x direction. What disturbance
-                should I added for my case?? Disturbance force applied to the ee? 
-                applying a random force [-force_mag, force_mag] at the CoM of the ee link every
-                {period} seconds'''
-            LeafSystem.__init__(self)
-            forces_cls = Value[List[ExternallyAppliedSpatialForce_[float]]]
-
-            # pull-based port (on-demand, e.g., during sim)
-            self.DeclareAbstractOutputPort("spatial_forces",
-                                           lambda: forces_cls(),
-                                           self.CalcDisturbances)
-            # push-based event (periodic)
-            self.DeclarePeriodicEvent(period_sec=period,
-                                      offset_sec=0.0,
-                                      event=PublishEvent(
-                                      callback=self._on_per_step))
-            self.plant = plant
-            self.ee_body = self.plant.GetBodyByName("panda_link8") # adapt to my ee link
-            self.F = SpatialForce(tau=[0., 0., 0.,],
-                                  f=[0., 0., 0.])
-            self.force_mag = force_mag                        
-        
-        def CalcDisturbances(self, context, spatial_forces_vector): # 3rd arg is output
-            # apply to the CoM of the ee
-            force = ExternallyAppliedSpatialForce_[float]()
-            force.body_index = self.ee_body.index()
-            force.p_BoBq_B = self.ee_body.default_com()
-            force.F_Bq_W = self.F
-            spatial_forces_vector.set_value([force])
-            self.F = SpatialForce(tau=[0., 0., 0.],
-                                  f=[0., 0., 0.])
-        
-        def _on_per_step(self, context, event):
-            self.F = SpatialForce(tau=[0., 0., 0.],
-                                  f=[np.random.uniform(-self.force_mag, self.force_mag),   # fx
-                                     np.random.uniform(-self.force_mag, self.force_mag),   # fy
-                                     np.random.uniform(-self.force_mag, self.force_mag)])  # fz
             
     if add_disturbances:
         # apply a force of 1N every 1s at the CoM of the ee link
