@@ -1,8 +1,7 @@
 import numpy as np
-from typing import List
 
 from pydrake.all import (LeafSystem, SpatialForce, ExternallyAppliedSpatialForce_, PublishEvent)
-from pydrake.common.value import Value
+from pydrake.common.value import AbstractValue
 
 #########################################################################################
 ######################### Observer system
@@ -143,11 +142,10 @@ class DisturbanceGenerator(LeafSystem):
             applying a random force [-force_mag, force_mag] at the CoM of the ee link every
             {period} seconds'''
         LeafSystem.__init__(self)
-        forces_cls = Value[List[ExternallyAppliedSpatialForce_[float]]]
 
         # pull-based port (on-demand, e.g., during sim)
         self.DeclareAbstractOutputPort("spatial_forces",
-                                        lambda: forces_cls(),
+                                        lambda: AbstractValue.Make([ExternallyAppliedSpatialForce_[float]()]),
                                         self.CalcDisturbances)
         # push-based event (periodic)
         self.DeclarePeriodicEvent(period_sec=period,

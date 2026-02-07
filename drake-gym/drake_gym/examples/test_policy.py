@@ -120,9 +120,11 @@ def main():
         if args.render:
             meshcat.StartRecording()
 
+        action_traj = []
         while not terminated and not truncated:
             # Get action from policy
             action, _ = model.predict(obs, deterministic=deterministic)
+            action_traj.append(action)
             
             # Step environment
             obs, reward, terminated, truncated, info = env.step(action)
@@ -139,6 +141,8 @@ def main():
         print(f"  Total reward: {total_reward:.3f}")
         print(f"  Steps: {step_count}")
         print(f"  Terminated: {terminated}, Truncated: {truncated}")
+        print(f"Saving action trajectory run {episode + 1}!")
+        np.save(f"action_trajectory_{episode + 1}.npy", np.array(action_traj))
 
         if args.render and episode < args.episodes - 1:
             input("Press Enter for next episode...")
