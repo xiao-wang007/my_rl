@@ -139,6 +139,12 @@ def main():
 
         print(f"Episode {episode + 1} finished:")
         print(f"  Total reward: {total_reward:.3f}")
+
+        diagram = env.unwrapped.simulator.get_system()
+        context = env.unwrapped.simulator.get_context()
+        reward_breakdown = diagram.GetOutputPort("reward_breakdown").Eval(context)
+        print(f"  Reward breakdown: {reward_breakdown}")
+
         print(f"  Steps: {step_count}")
         print(f"  Terminated: {terminated}, Truncated: {truncated}")
         print(f"Saving action trajectory run {episode + 1}!")
