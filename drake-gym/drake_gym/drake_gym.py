@@ -208,6 +208,9 @@ class DrakeGymEnv(gym.Env):
         context = self.simulator.get_context()
         time = context.get_time()
 
+        ''' 
+        FixValue holds the value constant over a simulation step when 
+        '''
         self.action_port.FixValue(context, action)
         truncated = False
         try:
