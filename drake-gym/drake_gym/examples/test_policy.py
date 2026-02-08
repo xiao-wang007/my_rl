@@ -69,6 +69,12 @@ def main():
         default=False,
         help="Use stochastic actions (with exploration noise). Default is deterministic.",
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="envs/franka_reach/diagnostic",
+        help="where to save the action traj from the test policy",
+    )
     args = parser.parse_args()
     
     # Deterministic is the opposite of stochastic
@@ -148,7 +154,7 @@ def main():
         print(f"  Steps: {step_count}")
         print(f"  Terminated: {terminated}, Truncated: {truncated}")
         print(f"Saving action trajectory run {episode + 1}!")
-        np.save(f"action_trajectory_{episode + 1}.npy", np.array(action_traj))
+        np.save(f"{args.output_dir}/action_trajectory_{episode + 1}.npy", np.array(action_traj))
 
         if args.render and episode < args.episodes - 1:
             input("Press Enter for next episode...")

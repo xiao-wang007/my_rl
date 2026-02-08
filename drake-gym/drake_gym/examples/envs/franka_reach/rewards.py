@@ -61,7 +61,66 @@ def safety_reward(state, **kwargs):
 
 '''
 
-def reaching_reward(state, plant, plant_context, target_pos, target_r1r2, **kwargs):
+##################### Position reaching reward
+def reaching_position(state, plant, plant_context, target_pos, coeff=10.0, **kwargs):
+    """
+    Reaching reward for end-effector pose matching.
+    
+    Args:
+        state: robot state [q(7), v(7)]
+        plant: MultibodyPlant for FK computation
+        plant_context: context for the plant
+        target_pos: target position [x, y, z]
+    """
+    q, _ = state[:7], state[7:14]
+    plant.SetPositions(plant_context, q)
+    ee_frame = plant.GetFrameByName("panda_link8")
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
+    p_ee_w = ee_pose.translation()
+
+
+    # position reward (0, 1]
+    ep = p_ee_w - target_pos
+    r_p = np.exp(-coeff * np.dot(ep, ep))
+    
+    return r_p
+
+
+##################### Orientation reaching reward
+def reaching_orientation(state, plant, plant_context, target_r1r2, coeff=10., **kwargs):
+    """
+    Reaching reward for end-effector pose matching.
+    
+    Args:
+        state: robot state [q(7), v(7)]
+        plant: MultibodyPlant for FK computation
+        plant_context: context for the plant
+        target_pos: target position [x, y, z]
+        target_r1r2: target orientation as [rx(3), ry(3)] where rx=x-axis, ry=y-axis
+    """
+    q, _ = state[:7], state[7:14]
+    plant.SetPositions(plant_context, q)
+    ee_frame = plant.GetFrameByName("panda_link8")
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
+    
+    r_ee_w = ee_pose.rotation().matrix()
+    ee_xhat_w = r_ee_w[:, 0]
+    ee_zhat_w = r_ee_w[:, 2]
+
+    # extract the target (compute z-axis from x cross y)
+    target_xhat_w = target_r1r2[:3]
+    target_yhat_w = target_r1r2[3:6]
+    target_zhat_w = np.cross(target_xhat_w, target_yhat_w)
+    
+    # oreintation error [-1, 1]
+    ex = np.dot(ee_xhat_w, target_xhat_w)
+    ez = np.dot(ee_zhat_w, target_zhat_w)
+    r_o = coeff * (ex + ez)
+    
+    return r_o 
+
+##################### Orientation reaching reward
+def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2, **kwargs):
     """
     Reaching reward for end-effector pose matching.
     
@@ -88,15 +147,11 @@ def reaching_reward(state, plant, plant_context, target_pos, target_r1r2, **kwar
     target_yhat_w = target_r1r2[3:6]
     target_zhat_w = np.cross(target_xhat_w, target_yhat_w)
 
-    # position reward (0, 1]
-    kp = 10.0
     ep = p_ee_w - p_target_w
-    r_p = np.exp(-kp * np.dot(ep, ep))
     
     # oreintation error [-1, 1]
     ex = np.dot(ee_xhat_w, target_xhat_w)
     ez = np.dot(ee_zhat_w, target_zhat_w)
-    r_o = 0.5 * (ex + ez)
 
     # terminal rewards
     epsilon_pos = 0.02  # 2 cm
@@ -110,8 +165,4 @@ def reaching_reward(state, plant, plant_context, target_pos, target_r1r2, **kwar
     if np.linalg.norm(ep) < epsilon_pos and e_ang_x < epsilon_ori and e_ang_z < epsilon_ori:
         r_terminal = 10.0
     
-    return r_p + r_o + r_terminal
-
-
-
-
+    return r_terminal

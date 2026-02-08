@@ -11,11 +11,6 @@ sys.path.insert(0, _EXAMPLES_DIR)
 _DRAKE_GYM_ROOT = os.path.dirname(os.path.dirname(_EXAMPLES_DIR))
 sys.path.insert(0, _DRAKE_GYM_ROOT)
 
-from controller_systems import VelocityTrackingController
-from rewards import CompositeReward, reaching_reward
-from terminations import (CompositeTermination, time_limit_termination, 
-                          ee_pose_goal_reached_termination, joint_limit_termination)
-from rl_systems import (ObserverSystem, DisturbanceGenerator, RewardSystem)
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -67,8 +62,13 @@ from drake_gym.drake_gym import DrakeGymEnv
 from terminations import *
 from functools import partial
 
-from rewards import CompositeReward, reaching_reward
 from terminations import *
+
+from controller_systems import VelocityTrackingController
+from rewards import (CompositeReward, reaching_position, reaching_orientation, reaching_terminal)
+from terminations import (CompositeTermination, time_limit_termination, 
+                          ee_pose_goal_reached_termination, joint_limit_termination)
+from rl_systems import (ObserverSystem, DisturbanceGenerator, RewardSystem)
 
 # Get the path to the models directory
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -245,7 +245,9 @@ def make_sim(generator,
 
     # Create composite reward with reaching reward function
     composite_reward = CompositeReward()
-    composite_reward.add_reward('reaching', reaching_reward, weight=1.0)
+    composite_reward.add_reward('reaching position', reaching_position, weight=1.0)
+    composite_reward.add_reward('reaching orientation', reaching_orientation, weight=1.0)
+    composite_reward.add_reward('reaching terminal', reaching_terminal, weight=1.0)
     
     reward_system = builder.AddSystem(RewardSystem(
         Ns=Ns,
@@ -550,7 +552,12 @@ if __name__ == "__main__":
 
     meshcat.StartRecording()
     while not terminated and not truncated:
+        # sample actions
         action = env.action_space.sample()
+
+        # # zero actions
+        # action = np.zeros_like(action)
+
         obs, reward, terminated, truncated, info = env.step(action)
         
         # Access reward breakdown from the diagram port
