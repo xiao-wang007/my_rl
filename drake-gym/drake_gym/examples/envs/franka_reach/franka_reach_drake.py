@@ -235,7 +235,7 @@ def make_sim(generator,
 
     # Create velocity controller
     velocity_controller = builder.AddSystem(
-        VelocityTrackingController(plant, agent, Kd=[50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
+        VelocityTrackingController(plant, agent, Kd=[30.0, 30.0, 30.0, 30.0, 5.0, 5.0, 5.0])
     )
     velocity_controller.set_name("velocity_controller")
 
