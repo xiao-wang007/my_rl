@@ -26,8 +26,8 @@ class ObserverSystem(LeafSystem):
         self.goal_state = goal_state  # Store reference to shared goal
         self.DeclareVectorInputPort("plant_states", self.Ns)
         self.DeclareVectorOutputPort("panda_joint_obs", self.Ns, self.CalcObs1)
-        self.DeclareVectorOutputPort("ee_pose_obs", 7, self.CalcObs2)  # pos(3) + [r1, r2](6)
-        self.DeclareVectorOutputPort("ee_pose_goal", 7, self.CalcObsGoal)
+        self.DeclareVectorOutputPort("ee_pose_obs", 9, self.CalcObs2)  # pos(3) + r1(3) + r2(3)
+        self.DeclareVectorOutputPort("ee_pose_goal", 9, self.CalcObsGoal)  # pos(3) + r1(3) + r2(3)
         self.noise = noise
         
         # Cache frame references

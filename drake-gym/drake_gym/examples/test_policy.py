@@ -20,8 +20,9 @@ sys.path.insert(0, _DRAKE_GYM_ROOT)
 import gymnasium as gym
 import numpy as np
 from stable_baselines3 import PPO
-from pydrake.all import StartMeshcat, Rgba, RigidTransform
+from pydrake.all import StartMeshcat, Rgba, RigidTransform, RotationMatrix
 from pydrake.geometry import Sphere
+from pydrake.common.eigen_geometry import Quaternion
 
 # Register the environment
 gym.envs.register(
@@ -30,17 +31,74 @@ gym.envs.register(
 )
 
 
-def visualize_target(meshcat, goal_pos, radius=0.05):
-    """Visualize target position as a red sphere in Meshcat."""
+def draw_triad(meshcat, name, pose, length=0.1, radius=0.005):
+    """Draw a coordinate frame triad (RGB = XYZ axes) at the given pose."""
+    from pydrake.geometry import Cylinder
+    from pydrake.math import RollPitchYaw
+    
+    # X-axis (red) - cylinder along X, rotated from Z
+    meshcat.SetObject(f"{name}/x_axis", Cylinder(radius, length), Rgba(1, 0, 0, 1))
+    X_x = RigidTransform(
+        RotationMatrix(RollPitchYaw(0, np.pi/2, 0)),  # Rotate Z to X
+        np.array([length/2, 0, 0])  # Offset to center
+    )
+    meshcat.SetTransform(f"{name}/x_axis", pose @ X_x)
+    
+    # Y-axis (green) - cylinder along Y
+    meshcat.SetObject(f"{name}/y_axis", Cylinder(radius, length), Rgba(0, 1, 0, 1))
+    X_y = RigidTransform(
+        RotationMatrix(RollPitchYaw(-np.pi/2, 0, 0)),  # Rotate Z to Y
+        np.array([0, length/2, 0])
+    )
+    meshcat.SetTransform(f"{name}/y_axis", pose @ X_y)
+    
+    # Z-axis (blue) - cylinder along Z (default)
+    meshcat.SetObject(f"{name}/z_axis", Cylinder(radius, length), Rgba(0, 0, 1, 1))
+    X_z = RigidTransform(np.array([0, 0, length/2]))
+    meshcat.SetTransform(f"{name}/z_axis", pose @ X_z)
+
+
+def visualize_target(meshcat, goal_pos, goal_r1r2=None, radius=0.02):
+    """Visualize target position as a red sphere and orientation as a triad."""
     meshcat.SetObject(
         "target",
         Sphere(radius),
-        Rgba(1.0, 0.0, 0.0, 0.7)  # Red, semi-transparent
+        Rgba(0.0, 1.0, 0.0, 0.5)  # green, semi-transparent
     )
     meshcat.SetTransform(
         "target",
         RigidTransform(goal_pos)
     )
+
+    # Add goal frame triad
+    if goal_r1r2 is not None:
+        rx = goal_r1r2[:3]
+        ry = goal_r1r2[3:6]
+        rz = np.cross(rx, ry)
+        R = RotationMatrix(np.column_stack([rx, ry, rz]))
+        goal_pose = RigidTransform(R, goal_pos)
+        draw_triad(meshcat, "goal_frame", goal_pose, length=0.15, radius=0.005)
+
+
+def update_ee_frame(meshcat, env):
+    """Update end-effector frame triad visualization.
+    #NOTE: this is for live viewing of meshcat visualization. Would not
+    # work in the playback with meshcat.StartRecording() """
+    diagram = env.unwrapped.simulator.get_system()
+    context = env.unwrapped.simulator.get_context()
+    
+    # Get EE pose from the exported port (pos=3 + r1=3 + r2=3)
+    ee_pose_vec = diagram.GetOutputPort("observations_ee_pose").Eval(context)
+    ee_pos = ee_pose_vec[:3]
+    rx = ee_pose_vec[3:6]
+    ry = ee_pose_vec[6:9]
+    rz = np.cross(rx, ry)
+    
+    # Build rotation matrix from r1, r2, r3
+    R = RotationMatrix(np.column_stack([rx, ry, rz]))
+    ee_pose = RigidTransform(R, ee_pos)
+    
+    draw_triad(meshcat, "ee_frame", ee_pose, length=0.1, radius=0.004)
 
 
 def main():
@@ -118,7 +176,8 @@ def main():
         # Visualize target position after reset (goal gets randomized)
         if args.render and hasattr(env.unwrapped, 'goal_state'):
             goal_pos = env.unwrapped.goal_state.goal_pos
-            visualize_target(meshcat, goal_pos)
+            goal_r1r2 = env.unwrapped.goal_state.goal_r1r2
+            visualize_target(meshcat, goal_pos, goal_r1r2)
             print(f"Target position: {goal_pos}")
 
         print(f"\n=== Episode {episode + 1}/{args.episodes} ===")
@@ -140,8 +199,8 @@ def main():
             if step_count % 10 == 0:
                 print(f"  Step {step_count}: reward = {reward:.3f}")
 
-        if args.render:
-            meshcat.PublishRecording()
+            if args.render:
+                meshcat.PublishRecording()
 
         print(f"Episode {episode + 1} finished:")
         print(f"  Total reward: {total_reward:.3f}")

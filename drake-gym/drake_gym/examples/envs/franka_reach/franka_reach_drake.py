@@ -56,6 +56,7 @@ from pydrake.all import (
 from pydrake.common.cpp_param import List
 from pydrake.common.value import Value
 from pydrake.systems.drawing import plot_graphviz, plot_system_graphviz
+from pydrake.visualization import AddFrameTriadIllustration
 
 from drake_gym.drake_gym import DrakeGymEnv
 
@@ -131,6 +132,17 @@ def make_sim(generator,
 
     # Add assets to the plant.
     agent = AddAgent(plant)
+    
+    # Add EE frame triad illustration (will be recorded with simulation)
+    AddFrameTriadIllustration(
+        scene_graph=scene_graph,
+        plant=plant,
+        body=plant.GetBodyByName("panda_link8"),
+        length=0.1,
+        radius=0.004,
+        opacity=0.3,
+    )
+    
     plant.Finalize()
     plant.set_name("plant_sim")
     scene_graph.set_name("scene_graph_sim")
@@ -246,7 +258,7 @@ def make_sim(generator,
     # Create composite reward with reaching reward function
     composite_reward = CompositeReward()
     composite_reward.add_reward('reaching position', reaching_position, weight=1.0)
-    composite_reward.add_reward('reaching orientation', reaching_orientation, weight=1.0)
+    # composite_reward.add_reward('reaching orientation', reaching_orientation, weight=1.0)
     composite_reward.add_reward('reaching terminal', reaching_terminal, weight=1.0)
     
     reward_system = builder.AddSystem(RewardSystem(
@@ -313,8 +325,11 @@ def make_sim(generator,
         lambda **kw: time_limit_termination(**kw, time_limit=time_limit), 
         is_success=False)
     termination_checker.add_termination('ee_position_goal_reached', 
-        lambda **kw: ee_pose_goal_reached_termination(**kw, ep_threshold=0.1, eq_threshold=0.35), 
+        lambda **kw: ee_position_reached_termination(**kw, ep_threshold=0.1), 
         is_success=True)
+    # termination_checker.add_termination('ee_orientation_goal_reached', 
+    #     lambda **kw: ee_orientation_reached_termination(**kw, eq_threshold=0.35), 
+    #     is_success=True)
     termination_checker.add_termination('joint_limits', 
         lambda **kw: joint_limit_termination(**kw, q_min=q_min, q_max=q_max), 
         is_success=False)
@@ -451,7 +466,11 @@ def set_home(simulator, diagram_context, seed, goal_state):
 
     ''' Randomize the target position using FK on a random config '''
     # 1. First, sample a random config for the GOAL (not the robot's starting config)
-    q_goal = np.random.uniform(q_min, q_max)
+    # q_goal = np.random.uniform(q_min, q_max)
+
+    # fix the goal 
+    rng = np.random.default_rng(seed)
+    q_goal = rng.uniform(low=q_min, high=q_max)
     plant.SetPositions(plant_context, q_goal)
     ee_frame = plant.GetFrameByName("panda_link8")
     p_ee_goal = ee_frame.CalcPoseInWorld(plant_context).translation()
@@ -545,7 +564,7 @@ if __name__ == "__main__":
 
     input("Open Meshcat URL in browser, then press Enter...")
 
-    obs = env.reset()
+    obs, info = env.reset(seed=42)
     # done = False
     terminated = False
     truncated = False

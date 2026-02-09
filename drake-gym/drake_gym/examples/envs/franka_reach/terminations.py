@@ -18,16 +18,7 @@ def time_limit_termination(t, time_limit, **kwargs):
         return TerminationResult(True, "time limit")
     return TerminationResult(False)
 
-
-def ee_position_goal_reached_termination(ee_pos, target_pos, threshold=0.05, **kwargs):
-    """Success: end-effector reached goal position."""
-    dist = np.linalg.norm(ee_pos - target_pos)
-    if dist < threshold:
-        return TerminationResult(True, "position reached goal")
-    return TerminationResult(False)
-
-def ee_pose_goal_reached_termination(ee_pos, ee_quat, target_pos, target_r1r2, ep_threshold=0.1, 
-                                     eq_threshold=0.35, **kwargs):
+def ee_position_reached_termination(ee_pos, target_pos, ep_threshold=0.1, **kwargs):
     '''
     Docstring for ee_pose_goal_reached_termination
     
@@ -39,17 +30,38 @@ def ee_pose_goal_reached_termination(ee_pos, ee_quat, target_pos, target_r1r2, e
     norm(eq) = 2 * sin(theta/2) where theta is the angle between two quaternions
     '''
     # Skip check if goal not set yet (happens during simulator.Initialize() before set_home())
-    if target_pos is None or target_r1r2 is None:
+    if target_pos is None:
+        return TerminationResult(False)
+    
+    ep = np.linalg.norm(ee_pos - target_pos)
+
+    if ep < ep_threshold: 
+        return TerminationResult(True, "end-effector position reached goal")
+    return TerminationResult(False)
+
+def ee_orientation_reached_termination(ee_quat, target_r1r2, eq_threshold=0.35, **kwargs):
+    '''
+    Docstring for ee_pose_goal_reached_termination
+    
+    :param ee_pose: 7D pose of the end-effector [x, y, z, qw, qx, qy, qz]
+    :param target_pose: 7D target pose [x, y, z, qw, qx, qy, qz]
+    :param ep_threshold: position error threshold
+    :param eq_threshold: orientation error threshold, 0.35 ~ 20 degrees
+
+    norm(eq) = 2 * sin(theta/2) where theta is the angle between two quaternions
+    '''
+    # Skip check if goal not set yet (happens during simulator.Initialize() before set_home())
+    if target_r1r2 is None:
         return TerminationResult(False)
     
     # convert target_r1r2 to quaternion
     target_quat = r1r2_to_quaternion(target_r1r2)
-    ep = np.linalg.norm(ee_pos - target_pos)
     eq = quat_error(target_quat, ee_quat)
 
-    if ep < ep_threshold and np.linalg.norm(eq) < eq_threshold:
+    if np.linalg.norm(eq) < eq_threshold:
         return TerminationResult(True, "end-effector pose reached goal")
     return TerminationResult(False)
+
 
 def joint_limit_termination(qs, q_min, q_max, margin=0.01, **kwargs):
     """Safety: joint limits violated."""
