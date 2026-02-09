@@ -189,7 +189,6 @@ def main():
         while not terminated and not truncated:
             # Get action from policy
             action, _ = model.predict(obs, deterministic=deterministic)
-            # action = 0.5 * action
             action_traj.append(action)
             
             # Step environment
