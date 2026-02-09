@@ -182,7 +182,8 @@ def main():
     zip = f"data/panda_reach_ppo_{config['observations']}.zip"
     Path("data").mkdir(parents=True, exist_ok=True)
 
-    num_cpu = int(cpu_count() / 2) if not args.test else 2
+    # num_cpu = int(cpu_count() / 2) if not args.test else 2
+    num_cpu = 8 if not args.test else 2
     if args.train_single_env:
         meshcat = StartMeshcat()
         env = gym.make(
