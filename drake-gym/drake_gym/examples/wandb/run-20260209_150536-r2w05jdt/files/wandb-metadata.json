@@ -1,0 +1,47 @@
+{
+  "os":  "macOS-26.2-arm64-arm-64bit",
+  "python":  "CPython 3.12.10",
+  "startedAt":  "2026-02-09T15:05:36.748490Z",
+  "args":  [
+    "--net_arch",
+    "256",
+    "256",
+    "--device",
+    "cpu",
+    "--checkpoint_freq",
+    "50000",
+    "--wandb",
+    "--v_max_scale=0.3"
+  ],
+  "program":  "/Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py",
+  "codePath":  "drake-gym/drake_gym/examples/train_franka_reach_PPO.py",
+  "codePathLocal":  "train_franka_reach_PPO.py",
+  "git":  {
+    "remote":  "git@github.com:xiao-wang007/my_rl.git",
+    "commit":  "c041c5c7eef7f8841ce352018a077d28cadc3cef"
+  },
+  "email":  "xwang0505dazzleyou@gmail.com",
+  "root":  "/Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples",
+  "host":  "Mac.lan",
+  "executable":  "/Users/xiao/miniforge3/envs/robotics/bin/python",
+  "cpu_count":  12,
+  "cpu_count_logical":  12,
+  "disk":  {
+    "/":  {
+      "total":  "494384795648",
+      "used":  "233845633024"
+    }
+  },
+  "memory":  {
+    "total":  "51539607552"
+  },
+  "apple":  {
+    "name":  "Apple M4 Pro",
+    "ecpuCores":  4,
+    "pcpuCores":  8,
+    "gpuCores":  16,
+    "memoryGb":  48,
+    "ramTotalBytes":  "51539607552"
+  },
+  "writerId":  "sbsk3mj4vgqndn349k20jp0y0bkq50v4"
+}
