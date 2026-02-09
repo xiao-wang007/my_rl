@@ -123,6 +123,12 @@ def main():
         choices=["auto", "cpu", "mps", "cuda"],
         help="Device to use: 'auto' (detect), 'cpu', 'mps' (Apple Silicon), or 'cuda'.",
     )
+    parser.add_argument(
+        "--v_max_scale",
+        type=float,
+        default=1.0,
+        help="Scale factor for max joint velocities (0, 1]. E.g. 0.3 = 30%% of hardware limits.",
+    )
     args = parser.parse_args()
 
     # Set up policy kwargs for custom network
@@ -143,6 +149,7 @@ def main():
         "observations": "state",
         "net_arch": args.net_arch if args.custom_net else [64, 64],
         "custom_net": args.custom_net,
+        "v_max_scale": args.v_max_scale,
     }
 
     if args.wandb:
@@ -179,7 +186,7 @@ def main():
         [WandbCallback(), every_n_timesteps, ProgressBarCallback()]
     )
 
-    zip = f"data/panda_reach_ppo_{config['observations']}.zip"
+    zip = f"data/panda_reach_ppo_{config['observations']}_vScale{config['v_max_scale']}.zip"
     Path("data").mkdir(parents=True, exist_ok=True)
 
     # num_cpu = int(cpu_count() / 2) if not args.test else 2
@@ -192,6 +199,7 @@ def main():
             observations=config["observations"],
             time_limit=config["env_time_limit"],
             device=args.device,
+            v_max_scale=config["v_max_scale"],
         )
         check_env(env)
         input("Open meshcat (optional). Press Enter to continue...")
@@ -224,6 +232,7 @@ def main():
                 observations=config["observations"],
                 time_limit=config["env_time_limit"],
                 device=device,
+                v_max_scale=config["v_max_scale"],
             )
 
         env = make_vec_env(

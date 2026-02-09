@@ -2,6 +2,26 @@ from pydrake.all import (LeafSystem)
 import numpy as np
 
 
+######################### Action Scaler
+# Maps normalized actions [-1, 1] to real velocity commands
+class ActionScaler(LeafSystem):
+    """
+    Scales normalized actions from [-1, 1] to real velocity limits.
+    
+    This keeps the RL agent in a well-conditioned [-1, 1] space
+    while the downstream controller receives physical velocities.
+    """
+    def __init__(self, v_max):
+        LeafSystem.__init__(self)
+        self.v_max = np.array(v_max)
+        n = len(self.v_max)
+        self.DeclareVectorInputPort("normalized_action", n)
+        self.DeclareVectorOutputPort("desired_velocity", n, self.CalcOutput)
+    
+    def CalcOutput(self, context, output):
+        u_normalized = self.get_input_port(0).Eval(context)
+        output.SetFromVector(u_normalized * self.v_max)
+
 
 ######################### Velocity Controller
 # Converts desired joint velocities (RL action) to joint torques
@@ -24,7 +44,8 @@ class VelocityTrackingController(LeafSystem):
         # Default gains (tuned for Panda)
         if Kd is None:
             # Higher gains for larger joints
-            self.Kd = np.array([50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
+            # self.Kd = np.array([50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
+            self.Kd = np.array([30.0, 30.0, 30.0, 30.0, 5.0, 5.0, 5.0])
         else:
             self.Kd = np.array(Kd)
         
@@ -39,7 +60,7 @@ class VelocityTrackingController(LeafSystem):
         self.plant_context = plant.CreateDefaultContext()
     
     def CalcTorque(self, context, output):
-        # Get desired velocity from RL action
+        # Get desired velocity (already in physical units)
         v_desired = self.get_input_port(0).Eval(context)
         
         # Get current state

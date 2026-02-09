@@ -60,15 +60,12 @@ from pydrake.visualization import AddFrameTriadIllustration
 
 from drake_gym.drake_gym import DrakeGymEnv
 
-from terminations import *
 from functools import partial
-
-from terminations import *
-
-from controller_systems import VelocityTrackingController
+from controller_systems import VelocityTrackingController, ActionScaler
 from rewards import (CompositeReward, reaching_position, reaching_orientation, reaching_terminal)
 from terminations import (CompositeTermination, time_limit_termination, 
-                          ee_pose_goal_reached_termination, joint_limit_termination)
+                          ee_position_reached_termination, ee_orientation_reached_termination, 
+                          joint_limit_termination)
 from rl_systems import (ObserverSystem, DisturbanceGenerator, RewardSystem)
 
 # Get the path to the models directory
@@ -81,7 +78,7 @@ gym_time_step = 0.1
 # sim_time_step = 0.001
 # gym_time_step = 0.01
 controller_time_step = 0.01
-gym_time_limit = 5
+gym_time_limit = 10 # in seconds
 drake_contact_models = ['point', 'hydroelastic_with_fallback']
 contact_model = drake_contact_models[0]
 drake_contact_solvers = ['sap', 'tamsi']
@@ -113,7 +110,8 @@ def make_sim(generator,
              debug=False,
              obs_noise=False,
              monitoring_camera=False,
-             add_disturbances=False):
+             add_disturbances=False,
+             v_max_scale=1.0):
 
     ''' RL goal or parameters '''
     # p_ee_goal_base = [0.5, 0.0, 0.5]
@@ -223,24 +221,33 @@ def make_sim(generator,
     # # Export for RL agent
     # builder.ExportInput(jvel_actuation_.get_input_port(), "actions_jnt_vel")
 
+    # Action scaler: maps RL actions [-1, 1] -> physical velocities
+    # v_max_scale ∈ (0, 1] caps max velocity so the agent learns slow motions first
+    v_max_hardware = np.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61])
+    v_max = v_max_scale * v_max_hardware
+    action_scaler = builder.AddSystem(ActionScaler(v_max))
+    action_scaler.set_name("action_scaler")
+
+    # Export normalized action input for RL agent
+    builder.ExportInput(
+        action_scaler.get_input_port(0), "actions_jnt_vel"
+    )
+
     # Create velocity controller
     velocity_controller = builder.AddSystem(
         VelocityTrackingController(plant, agent, Kd=[50.0, 50.0, 50.0, 50.0, 30.0, 25.0, 20.0])
     )
     velocity_controller.set_name("velocity_controller")
 
-    # Connect desired velocity input (from RL agent)
-    desired_vel_port = builder.ExportInput(
-        velocity_controller.get_input_port(0), "actions_jnt_vel"
+    # Scaler -> Controller -> Plant
+    builder.Connect(
+        action_scaler.get_output_port(),
+        velocity_controller.get_input_port(0)
     )
-
-    # Connect current state to controller
     builder.Connect(
         plant.get_state_output_port(),
         velocity_controller.get_input_port(1)
     )
-
-    # Connect controller output (torques) to plant actuation
     builder.Connect(
         velocity_controller.get_output_port(),
         plant.get_actuation_input_port(agent)
@@ -496,7 +503,8 @@ def PandaReachEnv(observations="state",
                   obs_noise=False,
                   monitoring_camera=False,
                   add_disturbances=False,
-                  device='cpu'):
+                  device='cpu',
+                  v_max_scale=1.0):
     
     # create goal state for randomized goals to be shared between RewardSystem()
     # and set_home()
@@ -510,14 +518,18 @@ def PandaReachEnv(observations="state",
                          debug=debug,
                          obs_noise=obs_noise,
                          monitoring_camera=monitoring_camera,
-                         add_disturbances=add_disturbances)
+                         add_disturbances=add_disturbances,
+                         v_max_scale=v_max_scale)
     
     plant_sim = simulator.get_system().GetSubsystemByName("plant_sim")
 
     # Define action space (always use float32 - sufficient for RL and works with MPS)
     Na = 7 # currently, only joint velocities as actions
-    low_a  = plant_sim.GetVelocityLowerLimits()[:Na]  # velocity limits are typically symmetric
-    high_a = plant_sim.GetVelocityUpperLimits()[:Na]
+    # low_a  = plant_sim.GetVelocityLowerLimits()[:Na]  # velocity limits are typically symmetric
+    # high_a = plant_sim.GetVelocityUpperLimits()[:Na]
+
+    low_a = -1.0 * np.ones(Na)
+    high_a = 1.0 * np.ones(Na)
     action_space = gym.spaces.Box(
         low=np.array(low_a, dtype=np.float32),
         high=np.array(high_a, dtype=np.float32),
