@@ -160,12 +160,12 @@ def main():
         env = gym.make(
             "panda-reach-v0",
             meshcat=meshcat,
-            time_limit=5,
+            time_limit=args.time_limit,
             debug=True,
         )
         input("Open Meshcat URL in browser, then press Enter to start...")
     else:
-        env = gym.make("panda-reach-v0", time_limit=5)
+        env = gym.make("panda-reach-v0", time_limit=args.time_limit)
 
     # Load the trained model
     print(f"Loading model from {args.model_path}")
@@ -195,7 +195,7 @@ def main():
         while not terminated and not truncated:
             # Get action from policy
             action, _ = model.predict(obs, deterministic=deterministic)
-            action = 0.3 * action  # scale down actions for testing
+            # action = 0.1 * action  # scale down actions for testing
             action_traj.append(action)
             
             # Step environment
