@@ -107,13 +107,13 @@ def main():
     parser.add_argument(
         "--custom_net",
         action="store_true",
-        help="Use custom network architecture [256, 256] with ReLU instead of default [64, 64] with Tanh.",
+        help="Use custom network architecture [128, 128] with ReLU instead of default [64, 64] with Tanh.",
     )
     parser.add_argument(
         "--net_arch",
         type=int,
         nargs="+",
-        default=[256, 256],
+        default=[128, 128],
         help="Hidden layer sizes for custom network (e.g., --net_arch 256 256 128).",
     )
     parser.add_argument(
@@ -128,6 +128,12 @@ def main():
         type=float,
         default=1.0,
         help="Scale factor for max joint velocities (0, 1]. E.g. 0.3 = 30%% of hardware limits.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=64,
+        help="Batch size for training.",
     )
     args = parser.parse_args()
 
@@ -150,6 +156,7 @@ def main():
         "net_arch": args.net_arch if args.custom_net else [64, 64],
         "custom_net": args.custom_net,
         "v_max_scale": args.v_max_scale,
+        "batch_size": args.batch_size if args.custom_net else 64,
     }
 
     if args.wandb:
@@ -186,7 +193,7 @@ def main():
         [WandbCallback(), every_n_timesteps, ProgressBarCallback()]
     )
 
-    zip = f"data/panda_reach_ppo_{config['observations']}_vScale{config['v_max_scale']}.zip"
+    zip = f"data/panda_reach_ppo_{config['observations']}_net{config['net_arch']}_vScale{config['v_max_scale']}.zip"
     Path("data").mkdir(parents=True, exist_ok=True)
 
     # num_cpu = int(cpu_count() / 2) if not args.test else 2
@@ -268,6 +275,7 @@ def main():
             tensorboard_log=f"runs/{run.id}",
             device=args.device,
             policy_kwargs=policy_kwargs,
+            batch_size=args.batch_size if args.custom_net else 64,  
         )
 
     model.learn(
