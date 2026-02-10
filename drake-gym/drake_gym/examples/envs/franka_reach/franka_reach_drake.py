@@ -474,10 +474,11 @@ def set_home(simulator, diagram_context, seed, goal_state):
     ''' Randomize the target position using FK on a random config '''
     # 1. First, sample a random config for the GOAL (not the robot's starting config)
     # q_goal = np.random.uniform(q_min, q_max)
+    # rng = np.random.default_rng(seed)
+    # q_goal = rng.uniform(low=q_min, high=q_max)
 
     # fix the goal 
-    rng = np.random.default_rng(seed)
-    q_goal = rng.uniform(low=q_min, high=q_max)
+    q_goal = np.array([1.1207,  0.3074, -0.9527, -2.0683,  0.2799,  2.1147, 2.])
     plant.SetPositions(plant_context, q_goal)
     ee_frame = plant.GetFrameByName("panda_link8")
     p_ee_goal = ee_frame.CalcPoseInWorld(plant_context).translation()
