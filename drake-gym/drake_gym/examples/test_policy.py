@@ -133,6 +133,12 @@ def main():
         default="envs/franka_reach/diagnostic",
         help="where to save the action traj from the test policy",
     )
+    parser.add_argument(
+        "--time_limit",
+        type=float,
+        default=5.0,
+        help="Time limit for each episode",
+    )
     args = parser.parse_args()
     
     # Deterministic is the opposite of stochastic
@@ -189,6 +195,7 @@ def main():
         while not terminated and not truncated:
             # Get action from policy
             action, _ = model.predict(obs, deterministic=deterministic)
+            action = 0.3 * action  # scale down actions for testing
             action_traj.append(action)
             
             # Step environment
