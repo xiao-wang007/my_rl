@@ -83,7 +83,7 @@ class ObserverSystem(LeafSystem):
 #########################################################################################
 ######################### Reward system
 class RewardSystem(LeafSystem):
-    def __init__(self, Ns, 
+    def __init__(self, Ns, gym_time_step,
                     plant_compute, plant_compute_context, composite_reward,
                     goal_state):
         LeafSystem.__init__(self)
@@ -91,6 +91,7 @@ class RewardSystem(LeafSystem):
         self.plant_context = plant_compute_context
         self.composite_reward = composite_reward
         self.goal_state = goal_state  # Shared mutable goal
+        self.Nv = plant_compute.num_velocities()
         
         # Get reward component names for output ordering
         self.reward_names = [c['name'] for c in composite_reward.components]
@@ -99,27 +100,22 @@ class RewardSystem(LeafSystem):
         self.DeclareVectorInputPort("state", Ns)
         self.DeclareVectorOutputPort("reward", 1, self.CalcReward)
 
-        # Output port for individual reward components (order matches self.reward_names)
-        # TODO: probably use abstract vector output for mixed data types for the breakdown
+        # Output port for individual reward components (order matches 
+        # self.reward_names)
+        # TODO: probably use abstract vector output for mixed data types 
+        #       for the breakdown
         #       such as dict with names and values: reaching: 0.8
-        self.DeclareVectorOutputPort("reward_breakdown", self.num_rewards, self.CalcRewardBreakdown)
-    
-    def _compute_rewards(self, context):
-        """Compute rewards and return (total, breakdown_dict)."""
-        state = self.get_input_port(0).Eval(context)
+        self.DeclareVectorOutputPort("reward_breakdown", self.num_rewards, 
+                                     self.CalcRewardBreakdown)
 
-        # set positions in plant context
-        qs = state[:self.plant.num_positions()]
-        self.plant.SetPositions(self.plant_context, qs)
-
-        total, breakdown = self.composite_reward(
-            state=state,
-            target_pos=self.goal_state.goal_pos,
-            target_r1r2=self.goal_state.goal_r1r2,
-            plant=self.plant,
-            plant_context=self.plant_context,
+        # add discrete state to cache v_prev for smoothness reward
+        self.v_prev_idx = self.DeclareDiscreteState(self.Nv)
+        # Periodic update to cache v_prev for smoothness reward
+        self.DeclarePeriodicDiscreteUpdateEvent(
+            period_sec=gym_time_step, # for policy level smoothness
+            offset_sec=0.0,
+            update=self._update_v_prev
         )
-        return total, breakdown
 
     def CalcReward(self, context, output):
         total, _ = self._compute_rewards(context)
@@ -131,6 +127,33 @@ class RewardSystem(LeafSystem):
         for i, name in enumerate(self.reward_names):
             output[i] = breakdown.get(name, 0.0) 
 
+    def _update_v_prev(self, context, output):
+        state = self.get_input_port(0).Eval(context)
+        v_now = state[self.plant.num_positions():]
+        output.set_value(self.v_prev_idx, v_now)
+
+    def _compute_rewards(self, context):
+        """Compute rewards and return (total, breakdown_dict)."""
+        state = self.get_input_port(0).Eval(context)
+        # get v_now
+        v_now = state[self.plant.num_positions():]
+
+        # get v_prev from discrete state 
+        v_prev = context.get_discrete_state(self.v_prev_idx).value()
+
+        # set positions in plant context
+        qs = state[:self.plant.num_positions()]
+        self.plant.SetPositions(self.plant_context, qs)
+
+        total, breakdown = self.composite_reward(
+            state=state,
+            target_pos=self.goal_state.goal_pos,
+            target_r1r2=self.goal_state.goal_r1r2,
+            plant=self.plant,
+            plant_context=self.plant_context,
+            v_prev=v_prev,
+        )
+        return total, breakdown
 
 #########################################################################################
 ######################### Disturbance

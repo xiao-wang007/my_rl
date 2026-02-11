@@ -18,7 +18,8 @@ class CompositeReward():
     def set_target(self, target_pose):
         self.target_pose = target_pose
     
-    def __call__(self, state, plant, plant_context, target_pos=None, target_r1r2=None, action=None):
+    def __call__(self, state, plant, plant_context, target_pos=None, 
+                 target_r1r2=None, action=None, v_prev=None):
         total = 0.0
         breakdown = {}
 
@@ -29,7 +30,8 @@ class CompositeReward():
             'target_r1r2': target_r1r2,
             'plant': plant,
             'plant_context': plant_context,
-            'action': action
+            'action': action,
+            'v_prev': v_prev,
         }
 
         for compo in self.components:
@@ -120,7 +122,8 @@ def reaching_orientation(state, plant, plant_context, target_r1r2, coeff=10., **
     return r_o 
 
 ##################### Orientation reaching reward
-def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2, **kwargs):
+def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2, 
+                      epsilon_pos, epsilon_ori, **kwargs):
     """
     Reaching reward for end-effector pose matching.
     
@@ -154,15 +157,28 @@ def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2, **kw
     ez = np.dot(ee_zhat_w, target_zhat_w)
 
     # terminal rewards
-    epsilon_pos = 0.02  # 2 cm
-    epsilon_ori = np.deg2rad(10) # 10 degrees 
+    epsilon_ori_rad = np.deg2rad(epsilon_ori) 
 
     # clip for numerical stability
     e_ang_x = np.arccos(np.clip(ex, -1.0, 1.0))
     e_ang_z = np.arccos(np.clip(ez, -1.0, 1.0))
 
     r_terminal = 0.
-    if np.linalg.norm(ep) < epsilon_pos and e_ang_x < epsilon_ori and e_ang_z < epsilon_ori:
+    if np.linalg.norm(ep) < epsilon_pos and e_ang_x < epsilon_ori_rad and e_ang_z < epsilon_ori_rad:
         r_terminal = 10.0
     
     return r_terminal
+
+##################### Penalty for acceleration (smoothness)
+def acceleration_smoothness(state, v_prev, dt, coeff=5e-3, **kwargs):
+    """
+    Smoothness reward based on acceleration (change in velocity).
+    
+    Args:
+        state: robot state [q(7), v(7)]
+        v_prev: previous velocity (from last time step)
+        dt: time step duration
+    """
+    v_now = state[7:14]
+    a = (v_now - v_prev) / dt
+    return -coeff * np.dot(a, a)

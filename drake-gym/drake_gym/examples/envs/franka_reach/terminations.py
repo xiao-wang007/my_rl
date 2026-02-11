@@ -18,7 +18,7 @@ def time_limit_termination(t, time_limit, **kwargs):
         return TerminationResult(True, "time limit")
     return TerminationResult(False)
 
-def ee_position_reached_termination(ee_pos, target_pos, ep_threshold=0.1, **kwargs):
+def ee_position_reached_termination(ee_pos, target_pos, ep_threshold=0.05, **kwargs):
     '''
     Docstring for ee_pose_goal_reached_termination
     

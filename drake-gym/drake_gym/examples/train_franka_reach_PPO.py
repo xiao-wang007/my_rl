@@ -135,6 +135,12 @@ def main():
         default=64,
         help="Batch size for training.",
     )
+    parser.add_argument(
+        "--n_epochs",
+        type=int,
+        default=10,
+        help="Number of epochs to train after each data collection rollout.",
+    )
     args = parser.parse_args()
 
     # Set up policy kwargs for custom network
@@ -275,7 +281,8 @@ def main():
             tensorboard_log=f"runs/{run.id}",
             device=args.device,
             policy_kwargs=policy_kwargs,
-            batch_size=args.batch_size if args.custom_net else 64,  
+            batch_size=args.batch_size if args.custom_net else 64,
+            n_epochs=args.n_epochs,
         )
 
     model.learn(

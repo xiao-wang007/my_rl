@@ -62,7 +62,8 @@ from drake_gym.drake_gym import DrakeGymEnv
 
 from functools import partial
 from controller_systems import VelocityTrackingController, ActionScaler
-from rewards import (CompositeReward, reaching_position, reaching_orientation, reaching_terminal)
+from rewards import (CompositeReward, reaching_position, reaching_orientation, 
+                     reaching_terminal, acceleration_smoothness)
 from terminations import (CompositeTermination, time_limit_termination, 
                           ee_position_reached_termination, ee_orientation_reached_termination, 
                           joint_limit_termination)
@@ -264,12 +265,21 @@ def make_sim(generator,
 
     # Create composite reward with reaching reward function
     composite_reward = CompositeReward()
-    composite_reward.add_reward('reaching position', reaching_position, weight=1.0)
+    composite_reward.add_reward('reaching position', 
+                                partial(reaching_position, coeff=10.0), weight=1.0)
     # composite_reward.add_reward('reaching orientation', reaching_orientation, weight=1.0)
-    composite_reward.add_reward('reaching terminal', reaching_terminal, weight=1.0)
+    composite_reward.add_reward('reaching terminal', 
+                                partial(reaching_terminal, 
+                                        epsilon_pos=0.05, epsilon_ori=10.0), # in degrees 
+                                weight=1.0)
+    composite_reward.add_reward('smoothness',
+                                partial(acceleration_smoothness, 
+                                        dt=gym_time_step, coeff=5e-3),
+                                weight=1.0)
     
     reward_system = builder.AddSystem(RewardSystem(
         Ns=Ns,
+        gym_time_step=gym_time_step,
         plant_compute=plant_compute,
         plant_compute_context=plant_compute_context,
         composite_reward=composite_reward,
@@ -332,7 +342,7 @@ def make_sim(generator,
         lambda **kw: time_limit_termination(**kw, time_limit=time_limit), 
         is_success=False)
     termination_checker.add_termination('ee_position_goal_reached', 
-        lambda **kw: ee_position_reached_termination(**kw, ep_threshold=0.1), 
+        lambda **kw: ee_position_reached_termination(**kw, ep_threshold=0.04), 
         is_success=True)
     # termination_checker.add_termination('ee_orientation_goal_reached', 
     #     lambda **kw: ee_orientation_reached_termination(**kw, eq_threshold=0.35), 
