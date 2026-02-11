@@ -1,0 +1,236 @@
+_current_progress_remaining:
+    value: 1
+_custom_logger:
+    value: "False"
+_episode_num:
+    value: 0
+_last_episode_starts:
+    value: '[ True  True  True  True  True  True  True  True]'
+_last_obs:
+    value: |-
+        [[ 1.1197839e+00  7.1406627e-01 -9.0522259e-01 -2.3694935e+00
+           6.7128229e-01  1.8076020e+00  1.6535499e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 8.5128516e-01 -8.2183350e-03 -7.8898990e-01 -1.9454085e+00
+           7.3380828e-01  2.4038265e+00  1.6760390e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 9.2366034e-01  1.2603787e-01 -1.2700770e+00 -1.7052947e+00
+          -1.4382149e-01  2.2178297e+00  2.0590315e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 1.2618171e+00  6.0910171e-01 -1.0921639e+00 -2.0622120e+00
+           2.4089046e-01  1.7021964e+00  1.9032495e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 6.1279523e-01  7.6588742e-02 -5.1546091e-01 -2.0192330e+00
+          -1.1408264e-01  2.5330679e+00  2.4976664e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 6.5769356e-01  2.6737291e-01 -9.8471612e-01 -1.7686286e+00
+           6.2329596e-01  1.8252388e+00  1.5654359e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 4.8102805e-01  4.3112725e-01 -1.3820245e+00 -1.9574045e+00
+           2.0988449e-01  1.6385263e+00  1.5556414e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]
+         [ 7.3124844e-01  3.1951544e-01 -1.2735122e+00 -2.5021167e+00
+          -1.6359097e-03  1.7724873e+00  2.0567639e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00  0.0000000e+00  0.0000000e+00
+           0.0000000e+00  0.0000000e+00]]
+_last_original_obs:
+    value: None
+_logger:
+    value: <stable_baselines3.common.logger.Logger object at 0x31733cda0>
+_n_updates:
+    value: 0
+_num_timesteps_at_start:
+    value: 0
+_stats_window_size:
+    value: 100
+_total_timesteps:
+    value: 6e+06
+_vec_normalize_env:
+    value: None
+_wandb:
+    value:
+        cli_version: 0.24.1
+        code_path: code/drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+        e:
+            7l9hz4bhgpf33m8130wztbvm859nnm61:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 16
+                    memoryGb: 48
+                    name: Apple M4 Pro
+                    pcpuCores: 8
+                    ramTotalBytes: "51539607552"
+                args:
+                    - --net_arch
+                    - "128"
+                    - "128"
+                    - --device
+                    - cpu
+                    - --checkpoint_freq
+                    - "50000"
+                    - --wandb
+                    - --batch_size
+                    - "2048"
+                codePath: drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+                codePathLocal: train_franka_reach_PPO.py
+                cpu_count: 12
+                cpu_count_logical: 12
+                disk:
+                    /:
+                        total: "494384795648"
+                        used: "233221746688"
+                email: xwang0505dazzleyou@gmail.com
+                executable: /Users/xiao/miniforge3/envs/robotics/bin/python
+                git:
+                    commit: 0373d2278dfad2ba1af3f3a1bd937a442e05cb63
+                    remote: git@github.com:xiao-wang007/my_rl.git
+                host: Mac.lan
+                memory:
+                    total: "51539607552"
+                os: macOS-26.2-arm64-arm-64bit
+                program: /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+                python: CPython 3.12.10
+                root: /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples
+                startedAt: "2026-02-11T13:17:26.032593Z"
+                writerId: 7l9hz4bhgpf33m8130wztbvm859nnm61
+        m: []
+        python_version: 3.12.10
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 16
+                - 22
+                - 35
+            "4": 3.12.10
+            "5": 0.24.1
+            "12": 0.24.1
+            "13": darwin-arm64
+action_noise:
+    value: None
+action_space:
+    value: Box(-1.0, 1.0, (7,), float32)
+algo:
+    value: PPO
+batch_size:
+    value: 64
+clip_range:
+    value: FloatSchedule(ConstantSchedule(val=0.2))
+clip_range_vf:
+    value: None
+custom_net:
+    value: false
+device:
+    value: cpu
+ent_coef:
+    value: 0
+env:
+    value: <stable_baselines3.common.vec_env.subproc_vec_env.SubprocVecEnv object at 0x15faeab40>
+env_name:
+    value: panda-reach-v0
+env_time_limit:
+    value: 10
+ep_info_buffer:
+    value: deque([], maxlen=100)
+ep_success_buffer:
+    value: deque([], maxlen=100)
+gae_lambda:
+    value: 0.95
+gamma:
+    value: 0.99
+learning_rate:
+    value: 0.0003
+local_log_dir:
+    value: logs/panda_reach_ppo
+lr_schedule:
+    value: FloatSchedule(ConstantSchedule(val=0.0003))
+max_grad_norm:
+    value: 0.5
+n_envs:
+    value: 8
+n_epochs:
+    value: 10
+n_steps:
+    value: 2048
+net_arch:
+    value:
+        - 64
+        - 64
+normalize_advantage:
+    value: "True"
+num_timesteps:
+    value: 0
+observation_space:
+    value: Box(-inf, inf, (14,), float32)
+observations:
+    value: state
+policy:
+    value: |-
+        ActorCriticPolicy(
+          (features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (pi_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (vf_features_extractor): FlattenExtractor(
+            (flatten): Flatten(start_dim=1, end_dim=-1)
+          )
+          (mlp_extractor): MlpExtractor(
+            (policy_net): Sequential(
+              (0): Linear(in_features=14, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+            (value_net): Sequential(
+              (0): Linear(in_features=14, out_features=64, bias=True)
+              (1): Tanh()
+              (2): Linear(in_features=64, out_features=64, bias=True)
+              (3): Tanh()
+            )
+          )
+          (action_net): Linear(in_features=64, out_features=7, bias=True)
+          (value_net): Linear(in_features=64, out_features=1, bias=True)
+        )
+policy_class:
+    value: <class 'stable_baselines3.common.policies.ActorCriticPolicy'>
+policy_kwargs:
+    value: '{}'
+policy_type:
+    value: MlpPolicy
+rollout_buffer:
+    value: <stable_baselines3.common.buffers.RolloutBuffer object at 0x15ec666f0>
+rollout_buffer_class:
+    value: <class 'stable_baselines3.common.buffers.RolloutBuffer'>
+rollout_buffer_kwargs:
+    value: '{}'
+sde_sample_freq:
+    value: -1
+seed:
+    value: None
+start_time:
+    value: 1770815850945904000
+target_kl:
+    value: None
+tensorboard_log:
+    value: runs/ot3ueg5v
+total_timesteps:
+    value: 500000
+use_sde:
+    value: "False"
+v_max_scale:
+    value: 1
+verbose:
+    value: 1
+vf_coef:
+    value: 0.5
