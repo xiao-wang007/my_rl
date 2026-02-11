@@ -141,6 +141,12 @@ def main():
         default=10,
         help="Number of epochs to train after each data collection rollout.",
     )
+    parser.add_argument(
+        "--n_steps",
+        type=int,
+        default=2048,
+        help="Number of steps to run for each environment per update.",
+    )
     args = parser.parse_args()
 
     # Set up policy kwargs for custom network
@@ -163,6 +169,7 @@ def main():
         "custom_net": args.custom_net,
         "v_max_scale": args.v_max_scale,
         "batch_size": args.batch_size if args.custom_net else 64,
+        "n_steps": args.n_steps,
     }
 
     if args.wandb:
@@ -283,6 +290,7 @@ def main():
             policy_kwargs=policy_kwargs,
             batch_size=args.batch_size if args.custom_net else 64,
             n_epochs=args.n_epochs,
+            n_steps=args.n_steps
         )
 
     model.learn(
