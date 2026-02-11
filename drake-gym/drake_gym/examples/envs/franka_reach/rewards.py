@@ -182,4 +182,4 @@ def velocity_smoothness(state, v_prev, **kwargs):
     max_dv_sq = np.dot(v_max, v_max)
     v_now = state[7:14]
     dv = (v_now - v_prev) 
-    return -np.dot(dv, dv) / max_dv_sq [-1, 0]
+    return -np.dot(dv, dv) / max_dv_sq # [-1, 0]
