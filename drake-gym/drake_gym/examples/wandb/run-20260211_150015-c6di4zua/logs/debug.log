@@ -1,0 +1,478 @@
+2026-02-11 15:00:15,924 INFO    MainThread:22669 [wandb_setup.py:_flush():81] Current SDK version is 0.24.1
+2026-02-11 15:00:15,924 INFO    MainThread:22669 [wandb_setup.py:_flush():81] Configure stats pid to 22669
+2026-02-11 15:00:15,924 INFO    MainThread:22669 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2026-02-11 15:00:15,925 INFO    MainThread:22669 [wandb_init.py:setup_run_log_directory():717] Logging user logs to /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/wandb/run-20260211_150015-c6di4zua/logs/debug.log
+2026-02-11 15:00:15,925 INFO    MainThread:22669 [wandb_init.py:setup_run_log_directory():718] Logging internal logs to /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/wandb/run-20260211_150015-c6di4zua/logs/debug-internal.log
+2026-02-11 15:00:15,927 INFO    MainThread:22669 [wandb_init.py:init():844] calling init triggers
+2026-02-11 15:00:15,927 INFO    MainThread:22669 [wandb_init.py:init():849] wandb.init called with sweep_config: {}
+config: {'policy_type': 'MlpPolicy', 'total_timesteps': 500000.0, 'env_name': 'panda-reach-v0', 'env_time_limit': 10, 'local_log_dir': 'logs/panda_reach_ppo', 'observations': 'state', 'net_arch': [128, 128], 'custom_net': True, 'v_max_scale': 1.0, 'batch_size': 2048, 'n_steps': 2048, '_wandb': {'code_path': 'code/drake-gym/drake_gym/examples/train_franka_reach_PPO.py'}}
+2026-02-11 15:00:15,927 INFO    MainThread:22669 [wandb_init.py:init():892] starting backend
+2026-02-11 15:00:16,166 INFO    MainThread:22669 [wandb_init.py:init():895] sending inform_init request
+2026-02-11 15:00:16,191 INFO    MainThread:22669 [wandb_init.py:init():903] backend started and connected
+2026-02-11 15:00:16,193 INFO    MainThread:22669 [wandb_init.py:init():973] updated telemetry
+2026-02-11 15:00:16,210 INFO    MainThread:22669 [wandb_init.py:init():997] communicating run to backend with 90.0 second timeout
+2026-02-11 15:00:16,951 INFO    MainThread:22669 [wandb_init.py:init():1042] starting run threads in backend
+2026-02-11 15:00:16,997 INFO    MainThread:22669 [wandb_run.py:_console_start():2529] atexit reg
+2026-02-11 15:00:16,997 INFO    MainThread:22669 [wandb_run.py:_redirect():2377] redirect: wrap_raw
+2026-02-11 15:00:16,997 INFO    MainThread:22669 [wandb_run.py:_redirect():2446] Wrapping output streams.
+2026-02-11 15:00:16,997 INFO    MainThread:22669 [wandb_run.py:_redirect():2469] Redirects installed.
+2026-02-11 15:00:16,999 INFO    MainThread:22669 [wandb_init.py:init():1082] run started, returning control to user process
+2026-02-11 15:00:19,393 INFO    MainThread:22669 [wandb_run.py:_tensorboard_callback():1615] tensorboard callback: runs/c6di4zua/PPO_1, True
+2026-02-11 15:00:19,395 INFO    MainThread:22669 [wandb_run.py:_config_callback():1404] config_cb None None {'algo': 'PPO', 'policy_class': "<class 'stable_baselines3.common.policies.ActorCriticPolicy'>", 'device': 'cpu', 'verbose': 1, 'policy_kwargs': "{'net_arch': [128, 128], 'activation_fn': <class 'torch.nn.modules.activation.ReLU'>}", 'num_timesteps': 0, '_total_timesteps': 6000000.0, '_num_timesteps_at_start': 0, 'seed': 'None', 'action_noise': 'None', 'start_time': 1770822019390543000, 'learning_rate': 0.0003, 'tensorboard_log': 'runs/c6di4zua', '_last_obs': '[[ 1.3851634   0.4042863  -1.2862539  -1.8726139   0.5181796   1.9695429\n   2.0588586   0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 1.0358261  -0.24140023 -0.9522031  -1.947929    0.25000295  1.9398576\n   1.5321354   0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 1.0141313   0.24035984 -0.8237424  -2.552293    0.40594453  2.1637995\n   2.4035654   0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 1.4081293   0.6375246  -0.63666487 -2.532502    0.6066635   1.7056862\n   2.202328    0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 1.3871255   0.69002944 -0.5847113  -2.0869765   0.43540975  1.6298836\n   1.8860077   0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 0.4767551   0.12670037 -0.8611796  -1.8325263   0.3934194   1.9602772\n   1.8922633   0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 1.3543636   0.3404682  -0.8730279  -1.6368823   0.61457616  1.6179754\n   2.288101    0.          0.          0.          0.          0.\n   0.          0.        ]\n [ 0.6761601  -0.01356304 -0.5434371  -2.3749158   0.1903481   2.5597813\n   1.6831771   0.          0.          0.          0.          0.\n   0.          0.        ]]', '_last_episode_starts': '[ True  True  True  True  True  True  True  True]', '_last_original_obs': 'None', '_episode_num': 0, 'use_sde': 'False', 'sde_sample_freq': -1, '_current_progress_remaining': 1.0, '_stats_window_size': 100, 'ep_info_buffer': 'deque([], maxlen=100)', 'ep_success_buffer': 'deque([], maxlen=100)', '_n_updates': 0, '_custom_logger': 'False', 'env': '<stable_baselines3.common.vec_env.subproc_vec_env.SubprocVecEnv object at 0x159051100>', '_vec_normalize_env': 'None', 'observation_space': 'Box(-inf, inf, (14,), float32)', 'action_space': 'Box(-1.0, 1.0, (7,), float32)', 'n_envs': 8, 'gamma': 0.99, 'gae_lambda': 0.95, 'ent_coef': 0.0, 'vf_coef': 0.5, 'max_grad_norm': 0.5, 'rollout_buffer_class': "<class 'stable_baselines3.common.buffers.RolloutBuffer'>", 'rollout_buffer_kwargs': '{}', 'n_epochs': 10, 'clip_range': 'FloatSchedule(ConstantSchedule(val=0.2))', 'clip_range_vf': 'None', 'normalize_advantage': 'True', 'target_kl': 'None', 'lr_schedule': 'FloatSchedule(ConstantSchedule(val=0.0003))', 'rollout_buffer': '<stable_baselines3.common.buffers.RolloutBuffer object at 0x14e48a4b0>', 'policy': 'ActorCriticPolicy(\n  (features_extractor): FlattenExtractor(\n    (flatten): Flatten(start_dim=1, end_dim=-1)\n  )\n  (pi_features_extractor): FlattenExtractor(\n    (flatten): Flatten(start_dim=1, end_dim=-1)\n  )\n  (vf_features_extractor): FlattenExtractor(\n    (flatten): Flatten(start_dim=1, end_dim=-1)\n  )\n  (mlp_extractor): MlpExtractor(\n    (policy_net): Sequential(\n      (0): Linear(in_features=14, out_features=128, bias=True)\n      (1): ReLU()\n      (2): Linear(in_features=128, out_features=128, bias=True)\n      (3): ReLU()\n    )\n    (value_net): Sequential(\n      (0): Linear(in_features=14, out_features=128, bias=True)\n      (1): ReLU()\n      (2): Linear(in_features=128, out_features=128, bias=True)\n      (3): ReLU()\n    )\n  )\n  (action_net): Linear(in_features=128, out_features=7, bias=True)\n  (value_net): Linear(in_features=128, out_features=1, bias=True)\n)', '_logger': '<stable_baselines3.common.logger.Logger object at 0x15d117230>'}
+2026-02-11 15:00:19,429 INFO    wandb-AsyncioManager-main:22669 [service_client.py:_forward_responses():94] Reached EOF.
+2026-02-11 15:00:19,429 INFO    wandb-AsyncioManager-main:22669 [mailbox.py:close():154] Closing mailbox, abandoning 1 handles.
+2026-02-11 15:00:19,502 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:19,609 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:19,722 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:19,829 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:19,934 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,045 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,144 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,249 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,360 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,465 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,574 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,681 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,790 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:20,900 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,008 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,111 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,221 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,324 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,429 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,536 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,645 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,749 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,856 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:21,963 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,059 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,064 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,068 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,085 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,090 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,090 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,090 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,091 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,092 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,092 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2026-02-11 15:00:22,093 ERROR   wandb-AsyncioManager-main:22669 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/site-packages/wandb/sdk/lib/service/service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 392, in drain
+    await self._protocol._drain_helper()
+  File "/Users/xiao/miniforge3/envs/robotics/lib/python3.12/asyncio/streams.py", line 166, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
