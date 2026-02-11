@@ -206,7 +206,7 @@ def main():
         [WandbCallback(), every_n_timesteps, ProgressBarCallback()]
     )
 
-    zip = f"data/panda_reach_ppo_{config['observations']}_net{config['net_arch'][0]}_vScale{config['v_max_scale']}.zip"
+    zip = f"data/panda_reach_ppo_{config['observations']}_net{config['net_arch'][0]}_vScale{config['v_max_scale']}_smoothness_reward.zip"
     Path("data").mkdir(parents=True, exist_ok=True)
 
     # num_cpu = int(cpu_count() / 2) if not args.test else 2
