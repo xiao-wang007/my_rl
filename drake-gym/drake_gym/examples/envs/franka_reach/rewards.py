@@ -64,7 +64,7 @@ def safety_reward(state, **kwargs):
 '''
 
 ##################### Position reaching reward
-def reaching_position(state, plant, plant_context, target_pos, coeff=10.0, **kwargs):
+def reaching_position(state, plant, plant_context, target_pos, coeff=1.0, **kwargs):
     """
     Reaching reward for end-effector pose matching.
     
@@ -83,7 +83,7 @@ def reaching_position(state, plant, plant_context, target_pos, coeff=10.0, **kwa
 
     # position reward (0, 1]
     ep = p_ee_w - target_pos
-    r_p = np.exp(-coeff * np.dot(ep, ep))
+    r_p = np.exp(-coeff * np.dot(ep, ep)) # (0, 1]
     
     return r_p
 
@@ -165,20 +165,21 @@ def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2,
 
     r_terminal = 0.
     if np.linalg.norm(ep) < epsilon_pos and e_ang_x < epsilon_ori_rad and e_ang_z < epsilon_ori_rad:
-        r_terminal = 10.0
+        r_terminal = 1.0
     
     return r_terminal
 
-##################### Penalty for acceleration (smoothness)
-def acceleration_smoothness(state, v_prev, dt, coeff=5e-3, **kwargs):
+##################### Penalty for velocity (smoothness)
+def velocity_smoothness(state, v_prev, **kwargs):
     """
-    Smoothness reward based on acceleration (change in velocity).
+    Smoothness reward based on velocity change.
     
     Args:
         state: robot state [q(7), v(7)]
         v_prev: previous velocity (from last time step)
-        dt: time step duration
     """
+    v_max = np.array([2.175, 2.175, 2.175, 2.175, 2.61, 2.61, 2.61])
+    max_dv_sq = np.dot(v_max, v_max)
     v_now = state[7:14]
-    a = (v_now - v_prev) / dt
-    return -coeff * np.dot(a, a)
+    dv = (v_now - v_prev) 
+    return -np.dot(dv, dv) / max_dv_sq [-1, 0]
