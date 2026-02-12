@@ -276,12 +276,11 @@ def make_sim(generator,
                                         ), 
                                 weight=1.0)
     composite_reward.add_reward('smoothness', velocity_smoothness, weight=1.0)
-    composite_reward.add_reward('consecutive hold',
-                                hold_at_target(threshold=0.05, 
-                                              k_steps=30, bonus=0.2), weight=1.0)
+    composite_reward.add_reward('hold at target',
+                                partial(hold_at_target, radius=0.05, bonus=0.2), weight=1.0)
     composite_reward.add_reward('velocity damping near target',
-                                velocity_damping_near_target(near_radius=0.1,
-                                                             coeff=0.05), weight=1.0)
+                                partial(velocity_damping_near_target, near_radius=0.1, coeff=0.05), 
+                                weight=1.0)
     
     reward_system = builder.AddSystem(RewardSystem(
         Ns=Ns,
