@@ -67,7 +67,7 @@ from rewards import (CompositeReward, reaching_position, reaching_orientation,
                      hold_at_target)
 from terminations import (CompositeTermination, consecutive_hold_at_target_termination, time_limit_termination, 
                           ee_position_reached_termination, ee_orientation_reached_termination, 
-                          joint_limit_termination, make_consecutive_hold_termination)
+                          joint_limit_termination, consecutive_hold_at_target_termination)
 from rl_systems import (ObserverSystem, DisturbanceGenerator, RewardSystem)
 
 # Get the path to the models directory
