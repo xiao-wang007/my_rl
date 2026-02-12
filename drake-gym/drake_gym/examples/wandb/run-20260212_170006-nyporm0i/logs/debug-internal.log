@@ -1,0 +1,12 @@
+{"time":"2026-02-12T17:00:06.545655Z","level":"INFO","msg":"stream: starting","core version":"0.24.1"}
+{"time":"2026-02-12T17:00:06.805956Z","level":"INFO","msg":"stream: created new stream","id":"nyporm0i"}
+{"time":"2026-02-12T17:00:06.80601Z","level":"INFO","msg":"handler: started","stream_id":"nyporm0i"}
+{"time":"2026-02-12T17:00:06.806193Z","level":"INFO","msg":"stream: started","id":"nyporm0i"}
+{"time":"2026-02-12T17:00:06.806199Z","level":"INFO","msg":"writer: started","stream_id":"nyporm0i"}
+{"time":"2026-02-12T17:00:06.806212Z","level":"INFO","msg":"sender: started","stream_id":"nyporm0i"}
+{"time":"2026-02-12T17:00:07.228864Z","level":"ERROR","msg":"git repo not found","error":"repository does not exist"}
+{"time":"2026-02-12T17:00:09.202508Z","level":"INFO","msg":"stream: closing","id":"nyporm0i"}
+{"time":"2026-02-12T17:00:09.849724Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-02-12T17:00:10.236549Z","level":"INFO","msg":"handler: closed","stream_id":"nyporm0i"}
+{"time":"2026-02-12T17:00:10.237111Z","level":"INFO","msg":"sender: closed","stream_id":"nyporm0i"}
+{"time":"2026-02-12T17:00:10.237191Z","level":"INFO","msg":"stream: closed","id":"nyporm0i"}

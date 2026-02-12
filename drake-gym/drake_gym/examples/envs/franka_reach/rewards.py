@@ -169,6 +169,33 @@ def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2,
     
     return r_terminal
 
+##################### Reaching position reward
+def reaching_position_terminal(state, plant, plant_context, target_pos, 
+                      epsilon_pos, **kwargs):
+    """
+    Reaching reward for end-effector pose matching.
+    
+    Args:
+        state: robot state [q(7), v(7)]
+        plant: MultibodyPlant for FK computation
+        plant_context: context for the plant
+        target_pos: target position [x, y, z]
+    """
+    q = state[:7]
+    plant.SetPositions(plant_context, q)
+    ee_frame = plant.GetFrameByName("panda_link8")
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
+    p_ee_w = ee_pose.translation()
+
+    # extract the target (compute z-axis from x cross y)
+    p_target_w = target_pos
+    ep = p_ee_w - p_target_w
+    
+    if np.linalg.norm(ep) < epsilon_pos:
+        return 1.0
+    
+    return 0.0
+
 ##################### Penalty for velocity (smoothness)
 def velocity_smoothness(state, v_prev, **kwargs):
     """

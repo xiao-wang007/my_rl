@@ -1,0 +1,12 @@
+{"time":"2026-02-12T17:04:39.259807Z","level":"INFO","msg":"stream: starting","core version":"0.24.1"}
+{"time":"2026-02-12T17:04:39.518289Z","level":"INFO","msg":"stream: created new stream","id":"ora009m1"}
+{"time":"2026-02-12T17:04:39.51834Z","level":"INFO","msg":"handler: started","stream_id":"ora009m1"}
+{"time":"2026-02-12T17:04:39.518498Z","level":"INFO","msg":"stream: started","id":"ora009m1"}
+{"time":"2026-02-12T17:04:39.518509Z","level":"INFO","msg":"writer: started","stream_id":"ora009m1"}
+{"time":"2026-02-12T17:04:39.518519Z","level":"INFO","msg":"sender: started","stream_id":"ora009m1"}
+{"time":"2026-02-12T17:04:39.878698Z","level":"ERROR","msg":"git repo not found","error":"repository does not exist"}
+{"time":"2026-02-12T17:04:41.873276Z","level":"INFO","msg":"stream: closing","id":"ora009m1"}
+{"time":"2026-02-12T17:04:42.739797Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-02-12T17:04:42.953664Z","level":"INFO","msg":"handler: closed","stream_id":"ora009m1"}
+{"time":"2026-02-12T17:04:42.954253Z","level":"INFO","msg":"sender: closed","stream_id":"ora009m1"}
+{"time":"2026-02-12T17:04:42.954344Z","level":"INFO","msg":"stream: closed","id":"ora009m1"}

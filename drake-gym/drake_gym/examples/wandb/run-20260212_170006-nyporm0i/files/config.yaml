@@ -1,0 +1,86 @@
+_wandb:
+    value:
+        cli_version: 0.24.1
+        code_path: code/drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+        e:
+            vh9chdv8d63adt9jz7b7zr32a365ufdr:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 16
+                    memoryGb: 48
+                    name: Apple M4 Pro
+                    pcpuCores: 8
+                    ramTotalBytes: "51539607552"
+                args:
+                    - --custom_net
+                    - --net_arch
+                    - "128"
+                    - "128"
+                    - --device
+                    - cpu
+                    - --checkpoint_freq
+                    - "50000"
+                    - --wandb
+                    - --batch_size
+                    - "2048"
+                codePath: drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+                codePathLocal: train_franka_reach_PPO.py
+                cpu_count: 12
+                cpu_count_logical: 12
+                disk:
+                    /:
+                        total: "494384795648"
+                        used: "234031378432"
+                email: xwang0505dazzleyou@gmail.com
+                executable: /Users/xiao/miniforge3/envs/robotics/bin/python
+                git:
+                    commit: 21b3ac4429b63eb5236e933254733f7964946104
+                    remote: git@github.com:xiao-wang007/my_rl.git
+                host: Xiaos-Mac-mini.local
+                memory:
+                    total: "51539607552"
+                os: macOS-26.2-arm64-arm-64bit
+                program: /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples/train_franka_reach_PPO.py
+                python: CPython 3.12.10
+                root: /Users/xiao/0_codes/my_rl/drake-gym/drake_gym/examples
+                startedAt: "2026-02-12T17:00:06.279162Z"
+                writerId: vh9chdv8d63adt9jz7b7zr32a365ufdr
+        m: []
+        python_version: 3.12.10
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 16
+                - 22
+                - 35
+            "4": 3.12.10
+            "5": 0.24.1
+            "12": 0.24.1
+            "13": darwin-arm64
+batch_size:
+    value: 2048
+custom_net:
+    value: true
+env_name:
+    value: panda-reach-v0
+env_time_limit:
+    value: 10
+local_log_dir:
+    value: logs/panda_reach_ppo
+n_steps:
+    value: 2048
+net_arch:
+    value:
+        - 128
+        - 128
+observations:
+    value: state
+policy_type:
+    value: MlpPolicy
+total_timesteps:
+    value: 500000
+v_max_scale:
+    value: 1

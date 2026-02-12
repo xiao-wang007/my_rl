@@ -64,7 +64,7 @@ from functools import partial
 from controller_systems import VelocityTrackingController, ActionScaler
 from rewards import (CompositeReward, reaching_position, reaching_orientation, 
                      reaching_terminal, velocity_smoothness, velocity_damping_near_target,
-                     hold_at_target)
+                     hold_at_target, reaching_position_terminal)
 from terminations import (CompositeTermination, consecutive_hold_at_target_termination, time_limit_termination, 
                           ee_position_reached_termination, ee_orientation_reached_termination, 
                           joint_limit_termination, consecutive_hold_at_target_termination)
@@ -236,9 +236,12 @@ def make_sim(generator,
         action_scaler.get_input_port(0), "actions_jnt_vel"
     )
 
-    # Create velocity controller
+    # Create velocity controller with position integration to prevent drift
     velocity_controller = builder.AddSystem(
-        VelocityTrackingController(plant, agent, Kd=[30.0, 30.0, 30.0, 30.0, 5.0, 5.0, 5.0])
+        VelocityTrackingController(plant, agent, 
+                                   Kp=[100.0, 100.0, 100.0, 100.0, 50.0, 50.0, 50.0],
+                                   Kd=[30.0, 30.0, 30.0, 30.0, 5.0, 5.0, 5.0],
+                                   dt=sim_time_step)
     )
     velocity_controller.set_name("velocity_controller")
 
@@ -268,13 +271,10 @@ def make_sim(generator,
     # Create composite reward with reaching reward function
     composite_reward = CompositeReward()
     composite_reward.add_reward('reaching position', 
-                                partial(reaching_position, coeff=1.0), weight=1.0)
+                                partial(reaching_position, coeff=10.0), weight=1.0)
     # composite_reward.add_reward('reaching orientation', reaching_orientation, weight=1.0)
     composite_reward.add_reward('reaching terminal', 
-                                partial(reaching_terminal, 
-                                        epsilon_pos=0.05, epsilon_ori=10.0 # in degrees 
-                                        ), 
-                                weight=1.0)
+                                partial(reaching_position_terminal, epsilon_pos=0.05), weight=1.0)
     composite_reward.add_reward('smoothness', velocity_smoothness, weight=1.0)
     composite_reward.add_reward('hold at target',
                                 partial(hold_at_target, radius=0.05, bonus=0.2), weight=1.0)
@@ -514,6 +514,10 @@ def set_home(simulator, diagram_context, seed, goal_state, hold_termination):
     v_init = np.zeros(7) # start from static for now
     plant.SetPositions(plant_context, q_init)
     plant.SetVelocities(plant_context, v_init)
+
+    # Reset velocity controller's position reference to match initial position
+    velocity_controller = diagram.GetSubsystemByName("velocity_controller")
+    velocity_controller.reset_reference(q_init)
 
 
 def PandaReachEnv(observations="state",
