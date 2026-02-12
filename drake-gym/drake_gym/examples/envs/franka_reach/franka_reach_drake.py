@@ -107,6 +107,7 @@ class GoalState():
 
 def make_sim(generator,
              goal_state,
+             hold_termination,
              meshcat=None,
              time_limit=5,
              debug=False,
@@ -355,7 +356,7 @@ def make_sim(generator,
     termination_checker.add_termination('joint_limits', 
         lambda **kw: joint_limit_termination(**kw, q_min=q_min, q_max=q_max), 
         is_success=False)
-    hold_termination = consecutive_hold_at_target_termination(threshold=0.05, k_steps=30)
+
     termination_checker.add_termination('consecutive_hold', hold_termination, is_success=True)
 
     # Episode end conditions:
@@ -394,12 +395,14 @@ def make_sim(generator,
     
     return simulator
 
-def set_home(simulator, diagram_context, seed, goal_state):
+def set_home(simulator, diagram_context, seed, goal_state, hold_termination):
     ''' An interface for domain and goal randomization 
         goal_state: an mutable object to store the goal position and orientation
                     it got randomized in each reset that calls set_home()
     '''
     # print(f"set_home called! New goal: {goal_state.goal_pos}")
+
+    hold_termination.reset() # reset the consecutive hold termination state
 
     # Joint limits for Franka Panda (from URDF, in radians)
     q_max = [2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973]  # positive limits
@@ -513,6 +516,7 @@ def set_home(simulator, diagram_context, seed, goal_state):
     plant.SetPositions(plant_context, q_init)
     plant.SetVelocities(plant_context, v_init)
 
+
 def PandaReachEnv(observations="state",
                   meshcat=None,
                   time_limit=gym_time_limit,
@@ -526,6 +530,7 @@ def PandaReachEnv(observations="state",
     # create goal state for randomized goals to be shared between RewardSystem()
     # and set_home()
     goal_state = GoalState()
+    hold_at_target_termination = consecutive_hold_at_target_termination(threshold=0.05, k_steps=30) 
     
     # make simulation
     simulator = make_sim(generator=RandomGenerator(),
@@ -573,7 +578,7 @@ def PandaReachEnv(observations="state",
         reward="reward", # will change later as I progress
         action_port_id="actions_jnt_vel", # will change later as I progress
         observation_port_id="observations_jnt_states",
-        set_home=partial(set_home, goal_state=goal_state),
+        set_home=partial(set_home, goal_state=goal_state, hold_termination=hold_at_target_termination),
         render_rgb_port_id="camera1_stream" if monitoring_camera else None)
     
     # Expose parameters that could be useful for learning

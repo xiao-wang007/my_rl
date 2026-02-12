@@ -85,7 +85,7 @@ def collision_termination(plant, plant_context, **kwargs):
     # Your collision checking logic
     pass
 
-def consecutive_hold_at_target_termination(ee_pos, target_pos, threshold=0.05, k_steps=30, **kwargs):
+def consecutive_hold_at_target_termination(threshold=0.05, k_steps=30, **kwargs):
     # Skip check if goal not set yet (happens during simulator.Initialize() before set_home())
     count = [0] 
 
