@@ -136,7 +136,7 @@ def main():
     parser.add_argument(
         "--time_limit",
         type=float,
-        default=5.0,
+        default=15.0,
         help="Time limit for each episode",
     )
     args = parser.parse_args()
@@ -195,7 +195,7 @@ def main():
         while not terminated and not truncated:
             # Get action from policy
             action, _ = model.predict(obs, deterministic=deterministic)
-            # action = 0.1 * action  # scale down actions for testing
+            # action = 0.3 * action  # scale down actions for testing
             action_traj.append(action)
             
             # Step environment

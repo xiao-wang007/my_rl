@@ -100,7 +100,7 @@ def reaching_orientation(state, plant, plant_context, target_r1r2, coeff=10., **
         target_pos: target position [x, y, z]
         target_r1r2: target orientation as [rx(3), ry(3)] where rx=x-axis, ry=y-axis
     """
-    q, _ = state[:7], state[7:14]
+    q = state[:7]
     plant.SetPositions(plant_context, q)
     ee_frame = plant.GetFrameByName("panda_link8")
     ee_pose = ee_frame.CalcPoseInWorld(plant_context)
@@ -134,7 +134,7 @@ def reaching_terminal(state, plant, plant_context, target_pos, target_r1r2,
         target_pos: target position [x, y, z]
         target_r1r2: target orientation as [rx(3), ry(3)] where rx=x-axis, ry=y-axis
     """
-    q, _ = state[:7], state[7:14]
+    q = state[:7]
     plant.SetPositions(plant_context, q)
     ee_frame = plant.GetFrameByName("panda_link8")
     ee_pose = ee_frame.CalcPoseInWorld(plant_context)
@@ -183,3 +183,47 @@ def velocity_smoothness(state, v_prev, **kwargs):
     v_now = state[7:14]
     dv = (v_now - v_prev) 
     return -np.dot(dv, dv) / max_dv_sq # [-1, 0]
+
+##################### Penalty for velocity (smoothness)
+def hold_at_target(state, plant, plant_context, target_pos, radius, bonus=0.2, **kwargs):
+    """
+    Reaching reward for end-effector pose matching.
+    
+    Args:
+        state: robot state [q(7), v(7)]
+        plant: MultibodyPlant for FK computation
+        plant_context: context for the plant
+        target_pos: target position [x, y, z]
+    """
+    q = state[:7]
+    plant.SetPositions(plant_context, q)
+    ee_frame = plant.GetFrameByName("panda_link8")
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
+    p_ee_w = ee_pose.translation()
+
+    # position reward (0, 1]
+    ep = p_ee_w - target_pos
+    
+    if np.linalg.norm(ep) < radius:
+        ''' with bonous = 0.2, sim dt = 0.01, reward for
+            1 second is 20 which is comparable to the 
+            reaching reward '''
+        return bonus # 
+    return 0.0
+
+##################### Penalty for velocity (smoothness)
+def velocity_damping_near_target(state, plant, plant_context, target_pos, 
+                                 near_radius=0.1, coeff=0.05, **kwargs): 
+    q, v = state[:7], state[7:14]
+    plant.SetPositions(plant_context, q)
+    ee_frame = plant.GetFrameByName("panda_link8")
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
+    p_ee_w = ee_pose.translation()
+
+    # position reward (0, 1]
+    ep = p_ee_w - target_pos
+    
+    if np.linalg.norm(ep) < near_radius:
+        return -coeff * np.dot(v, v)
+    return 0.0
+    

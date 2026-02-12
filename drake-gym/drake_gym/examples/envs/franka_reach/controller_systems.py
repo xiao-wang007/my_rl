@@ -80,6 +80,7 @@ class VelocityTrackingController(LeafSystem):
         
         # Total torque = PD + gravity compensation
         tau = tau_pd - tau_gravity  # negative because gravity is in the opposite direction
+        # tau = tau_pd # no gravity compensation
         
         # Clamp to effort limits
         effort_limits = np.array([87, 87, 87, 87, 12, 12, 12])

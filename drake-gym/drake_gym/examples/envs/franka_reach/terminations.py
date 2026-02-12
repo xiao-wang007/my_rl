@@ -85,6 +85,30 @@ def collision_termination(plant, plant_context, **kwargs):
     # Your collision checking logic
     pass
 
+def consecutive_hold_at_target_termination(ee_pos, target_pos, threshold=0.05, k_steps=30, **kwargs):
+    # Skip check if goal not set yet (happens during simulator.Initialize() before set_home())
+    count = [0] 
+
+    def check(ee_pos, target_pos, **kwargs):
+        if target_pos is None:
+            return TerminationResult(False)
+        
+        ep = np.linalg.norm(ee_pos - target_pos)
+        if ep < threshold:
+            count[0] += 1
+            if count[0] >= k_steps:
+                return TerminationResult(True, f"held for {k_steps} steps")
+        else:
+            count[0] = 0
+        return TerminationResult(False)
+    
+    def reset():
+        count[0] = 0
+    
+    check.reset = reset # I don't like this hacky style. TODO: be traditional!
+    return check
+
+
 
 # Composite termination checker
 class CompositeTermination:

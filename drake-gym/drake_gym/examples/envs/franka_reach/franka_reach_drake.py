@@ -63,10 +63,11 @@ from drake_gym.drake_gym import DrakeGymEnv
 from functools import partial
 from controller_systems import VelocityTrackingController, ActionScaler
 from rewards import (CompositeReward, reaching_position, reaching_orientation, 
-                     reaching_terminal, velocity_smoothness)
-from terminations import (CompositeTermination, time_limit_termination, 
+                     reaching_terminal, velocity_smoothness, velocity_damping_near_target,
+                     hold_at_target)
+from terminations import (CompositeTermination, consecutive_hold_at_target_termination, time_limit_termination, 
                           ee_position_reached_termination, ee_orientation_reached_termination, 
-                          joint_limit_termination)
+                          joint_limit_termination, make_consecutive_hold_termination)
 from rl_systems import (ObserverSystem, DisturbanceGenerator, RewardSystem)
 
 # Get the path to the models directory
@@ -270,11 +271,16 @@ def make_sim(generator,
     # composite_reward.add_reward('reaching orientation', reaching_orientation, weight=1.0)
     composite_reward.add_reward('reaching terminal', 
                                 partial(reaching_terminal, 
-                                        epsilon_pos=0.05, epsilon_ori=10.0), # in degrees 
+                                        epsilon_pos=0.05, epsilon_ori=10.0 # in degrees 
+                                        ), 
                                 weight=1.0)
-    composite_reward.add_reward('smoothness',
-                                velocity_smoothness,
-                                weight=1.0)
+    composite_reward.add_reward('smoothness', velocity_smoothness, weight=1.0)
+    composite_reward.add_reward('consecutive hold',
+                                hold_at_target(threshold=0.05, 
+                                              k_steps=30, bonus=0.2), weight=1.0)
+    composite_reward.add_reward('velocity damping near target',
+                                velocity_damping_near_target(near_radius=0.1,
+                                                             coeff=0.05), weight=1.0)
     
     reward_system = builder.AddSystem(RewardSystem(
         Ns=Ns,
@@ -349,7 +355,8 @@ def make_sim(generator,
     termination_checker.add_termination('joint_limits', 
         lambda **kw: joint_limit_termination(**kw, q_min=q_min, q_max=q_max), 
         is_success=False)
-
+    hold_termination = consecutive_hold_at_target_termination(threshold=0.05, k_steps=30)
+    termination_checker.add_termination('consecutive_hold', hold_termination, is_success=True)
 
     # Episode end conditions:
     def monitor(context, state_view=StateView):
