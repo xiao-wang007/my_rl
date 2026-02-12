@@ -535,6 +535,7 @@ def PandaReachEnv(observations="state",
     # make simulation
     simulator = make_sim(generator=RandomGenerator(),
                          goal_state=goal_state,
+                         hold_termination=hold_at_target_termination,
                          meshcat=meshcat,
                          time_limit=time_limit,
                          debug=debug,
