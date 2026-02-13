@@ -59,6 +59,10 @@ class VelocityTrackingController(LeafSystem):
         self.q_ref = None  # Will be initialized on first call
         self.initialized = False
         
+        # Previous torque for rate limiting (Franka limit: 1000 Nm/s)
+        self.tau_prev = np.zeros(self.na)
+        self.tau_rate_limit = 1000.0  # Nm/s
+        
         # Joint limits for clamping q_ref
         self.q_min = np.array([-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973])
         self.q_max = np.array([2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973])
@@ -76,6 +80,7 @@ class VelocityTrackingController(LeafSystem):
     def reset_reference(self, q_init):
         """Reset the position reference to a given configuration."""
         self.q_ref = np.array(q_init)
+        self.tau_prev = np.zeros(self.na)  # reset torque history for rate limiting
         self.initialized = True
     
     def CalcTorque(self, context, output):
@@ -116,5 +121,10 @@ class VelocityTrackingController(LeafSystem):
         # Clamp to effort limits
         effort_limits = np.array([87, 87, 87, 87, 12, 12, 12])
         tau = np.clip(tau, -effort_limits, effort_limits)
+        
+        # Apply torque rate limiting (Franka limit: 1000 Nm/s)
+        max_delta_tau = self.tau_rate_limit * self.dt
+        tau = np.clip(tau, self.tau_prev - max_delta_tau, self.tau_prev + max_delta_tau)
+        self.tau_prev = tau.copy()
         
         output.SetFromVector(tau)
