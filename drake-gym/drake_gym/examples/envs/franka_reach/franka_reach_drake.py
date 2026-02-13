@@ -70,6 +70,8 @@ from terminations import (CompositeTermination, consecutive_hold_at_target_termi
                           joint_limit_termination, consecutive_hold_at_target_termination)
 from rl_systems import (ObserverSystem, DisturbanceGenerator, RewardSystem)
 
+from env_states import (GoalState, ConsecutiveHoldAtTargetTermination)
+
 # Get the path to the models directory
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _MODELS_DIR = os.path.join(_THIS_DIR, "..", "..", "..", "models")
@@ -96,14 +98,6 @@ def AddAgent(plant):
     plant.WeldFrames(plant.world_frame(), 
                      plant.GetFrameByName("panda_link0"))
     return agent
-
-class GoalState():
-    """ Shared mutable goal state gets updated on reset (in set_home()) 
-        and read by RewardSystem() during sim steps.  """
-    def __init__(self):
-        self.goal_pos = np.array([0.5, 0.5, 0.3])
-        # self.goal_quat = np.array([1., 0., 0., 0.])  # w, x, y, z
-        self.goal_r1r2 = np.zeros(6)
 
 def make_sim(generator,
              goal_state,
@@ -533,7 +527,7 @@ def PandaReachEnv(observations="state",
     # create goal state for randomized goals to be shared between RewardSystem()
     # and set_home()
     goal_state = GoalState()
-    hold_at_target_termination = consecutive_hold_at_target_termination(threshold=0.05, k_steps=30) 
+    hold_at_target_termination = ConsecutiveHoldAtTargetTermination(threshold=0.05, k_steps=30) 
     
     # make simulation
     simulator = make_sim(generator=RandomGenerator(),
