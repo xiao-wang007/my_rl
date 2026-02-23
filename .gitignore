@@ -15,3 +15,6 @@ wandb/
 # OS files
 .DS_Store
 Thumbs.db
+
+# MuJoCo assets
+/mjx_rl/my_builds/mujoco_menagerie/
