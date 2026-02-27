@@ -1,4 +1,10 @@
 {
+  "python.defaultInterpreterPath": "/Users/xiao/miniconda3/envs/learning/bin/python",
+  "python.terminal.activateEnvironment": false,
+  "terminal.integrated.env.osx": {
+    "VIRTUAL_ENV": "",
+    "PATH": "/Users/xiao/miniconda3/envs/learning/bin:${env:PATH}"
+  },
   "python.testing.pytestArgs": [
     "."
   ],
