@@ -1,10 +1,10 @@
 {
-  "python.defaultInterpreterPath": "/Users/xiao/miniconda3/envs/learning/bin/python",
-  "python.terminal.activateEnvironment": false,
-  "terminal.integrated.env.osx": {
-    "VIRTUAL_ENV": "",
-    "PATH": "/Users/xiao/miniconda3/envs/learning/bin:${env:PATH}"
-  },
+  // "python.defaultInterpreterPath": "/Users/xiao/miniconda3/envs/learning/bin/python",
+  // "python.terminal.activateEnvironment": false,
+  // "terminal.integrated.env.osx": {
+  //   "VIRTUAL_ENV": "",
+  //   "PATH": "/Users/xiao/miniconda3/envs/learning/bin:${env:PATH}"
+  // },
   "python.testing.pytestArgs": [
     "."
   ],
@@ -66,5 +66,7 @@
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-  "C_Cpp_Runner.msvcSecureNoWarnings": false
+  "C_Cpp_Runner.msvcSecureNoWarnings": false,
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda"
 }
