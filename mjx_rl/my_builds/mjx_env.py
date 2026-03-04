@@ -7,7 +7,9 @@ This file gives you a minimal env API that can be wrapped by
 from flax import struct
 import jax
 import jax.numpy as jnp
-
+from etils import epath
+import mujoco
+from mujoco import mjx
 
 @struct.dataclass
 class MJXState:
@@ -15,7 +17,7 @@ class MJXState:
 
     obs: jnp.ndarray
     reward: jnp.ndarray
-    done: jnp.ndarray
+    done: jnp.ndarray #! keep done as array for JAX consistency
     t: jnp.ndarray
     # Add task-specific physics fields here, e.g.:
     # qpos: jnp.ndarray
@@ -30,10 +32,26 @@ class MyMJXEnv():
         observation_size: int,
         action_size: int,
         episode_length: int = 1000,
+        qpos_init: jnp.ndarray = None,
     ):
         self.observation_size = observation_size
         self.action_size = action_size
         self.episode_length = episode_length
+        self.init_qpos = qpos_init if qpos_init is not None else jnp.zeros((7,), dtype=jnp.float32)
+
+        # load the franka model #TODO: currently only arm, may need add object later
+        FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda')
+
+        #TODO: make mj_model a memebr too, could be useful for size/constants and host-side ops
+        self.mj_model = mujoco.MjModel.from_xml_path(
+            (FRANKA_ROOT_PATH / 'panda.xml').as_posix())
+        self.mj_model.opt.solver = mujoco.mjtSolver.mjSOL_CG
+
+        #? not sure what these are doing, ignore for now
+        self.mj_model.opt.iterations = 6
+        self.mj_model.opt.ls_iterations = 6
+
+        self.mjx_model = mjx.put_model(self.mj_model)
 
         #TODO: these are some dummies for placeholder, change accordingly
         self.reward_weights = {
@@ -51,7 +69,26 @@ class MyMJXEnv():
             MJXState with fields `obs`, `reward`, `done`.
         """
         del params
-        obs = jnp.zeros((self.observation_size,), dtype=jnp.float32)
+
+        data = mjx.make_data(self.mjx_model)
+        data = data.replace(
+            qpos=self.init_qpos,
+            qvel=jnp.zeros_like(data.qvel),
+            ctrl=jnp.zeros_like(data.ctrl)
+        )
+
+        #* do the forward step 
+        #* forward computes the consistent quantities for the
+        #* current state, such as kinematics, contact detection/constraints, bias terms
+        #* etc. at current time
+        #* 
+        #* step calls on contact solver (solves for constrained accelerations and related
+        #* forces), then  integrate forward in time.
+        data = mjx.forward(self.mjx_model, data)
+
+        #? data.qpos and data.qvel are 1D, axis=0 is not necessary
+        obs = jnp.concatenate([data.qpos, data.qvel], axis=0).astype(jnp.float32)  
+
         return MJXState(
             obs=obs,
             reward=jnp.array(0.0, dtype=jnp.float32),
