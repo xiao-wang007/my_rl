@@ -1,0 +1,25 @@
+# Bridge my env to PPO in jax (04/03/2026)
+## Revisit some papers for reward shaping and domain randomization (in env reset())
+
+Exactly.
+
+To bridge your MJX env into `ppo_continuous_action.py`, you need:
+
+1. Config wiring
+- `ENV_BACKEND="mjx"`
+- `MJX_ENV=<your env instance>`
+- optional but safer: `ACTION_SIZE`, `OBSERVATION_SIZE` matching env
+
+2. Interface consistency
+- `env.reset` / `env.step` must return state/obs/reward/done compatible with `MJXGymnaxWrapper`
+- `obs` shape must match network input size
+- `action_space.shape[0]` must match policy output dimension (your 21)
+
+3. Reward/done semantics
+- reward scalar per step
+- done boolean per step with your auto-reset convention
+
+4. Observation definition consistency
+- what PPO sees (`obs`) should be exactly what your controller/reward logic expects (same indexing assumptions)
+
+So yes: config + shape/semantics alignment is the key checklist.

@@ -10,15 +10,17 @@ import jax.numpy as jnp
 from etils import epath
 import mujoco
 from mujoco import mjx
+from typing import Any
 
 @struct.dataclass
 class MJXState:
     """Env state returned by `reset` and consumed by `step`."""
-
+    data: Any           #! to hold mujoco data 
     obs: jnp.ndarray
     reward: jnp.ndarray
-    done: jnp.ndarray #! keep done as array for JAX consistency
+    done: jnp.ndarray   #! keep done as array for JAX consistency
     t: jnp.ndarray
+    action_v_prev: jnp.ndarray
     # Add task-specific physics fields here, e.g.:
     # qpos: jnp.ndarray
     # qvel: jnp.ndarray
@@ -42,16 +44,72 @@ class MyMJXEnv():
         # load the franka model #TODO: currently only arm, may need add object later
         FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda')
 
-        #TODO: make mj_model a memebr too, could be useful for size/constants and host-side ops
         self.mj_model = mujoco.MjModel.from_xml_path(
             (FRANKA_ROOT_PATH / 'panda.xml').as_posix())
         self.mj_model.opt.solver = mujoco.mjtSolver.mjSOL_CG
+        assert self.mj_model.nu == 7, (
+            f"Expected 7 actuators (arm-only model), got nu={self.mj_model.nu}. "
+            "Use a no-gripper Panda XML or update controller/action dimensions."
+        )
+
+        # mujoco sim dt
+        self._dt_sim = 0.004
+        self.mj_model.opt.timestep = self._dt_sim
+
+        # policy dt
+        self._dt_env = 0.02 # 50Hz
+
+        # repeat action to match env_dt to sim_dt
+        self.action_repeat = int(self._dt_env / self._dt_sim)
+
+        #! in mujoco the controllers are prescribed in the xml, of different types
+        #! such as <general>, <position>, <motor>, etc. Which cannot be changed 
+        #! programmatically. The <general> one with biastype="affine" is used 
+        #! for better customization:
+        #!     tau = g0*ctrl + b0 + b1*qpos + b2*qvel
+        #! where g0 is _gainprm[:, 0], b0, b1, b2 correspond to _biasprm[:, 0:3]
+        #! this is essentially making the variable ctrl symbolic.
+        #! with g0 = 1, and b0, b1, b2 = 0, the control is a direct torque control
+        #! if ctrl is torque.
+
+        #* using <general> actuator with biastype="affine" for direct control of 
+        #* torques, with no bias terms 
+        arm = slice(0, 7)
+        self.mj_model.actuator_gainprm[arm, 0] = 1.0
+        self.mj_model.actuator_biasprm[arm, :] = 0.0
+
+        # joint 1-4 
+        self.mj_model.actuator_ctrlrange[:4, 0] = -81.0
+        self.mj_model.actuator_ctrlrange[:4, 1] = 81.0
+
+        # joint 5-7
+        self.mj_model.actuator_ctrlrange[4:7, 0] = -12.0
+        self.mj_model.actuator_ctrlrange[4:7, 1] = 12.0
 
         #? not sure what these are doing, ignore for now
         self.mj_model.opt.iterations = 6
         self.mj_model.opt.ls_iterations = 6
 
+        # u of shape (nu, 2)
+        u_bounds = jnp.array(self.mj_model.actuator_ctrlrange, dtype=jnp.float32)
+        self.u_low = u_bounds[:, 0]
+        self.u_high = u_bounds[:, 1]
         self.mjx_model = mjx.put_model(self.mj_model)
+
+        # v bounds for joints, mujoco does not have this natively
+        self.v_high = jnp.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61], dtype=jnp.float32)
+        self.v_low = -self.v_high
+
+        # get joint limits
+        self.limit_margin = 1e-3
+        self.qpos_low = jnp.array(self.mj_model.jnt_range[:, 0])
+        self.qpos_high = jnp.array(self.mj_model.jnt_range[:, 1])
+        
+        # gain bounds 
+        self.kp_high = jnp.array([200.0]*7, dtype=jnp.float32)
+        self.kp_low = jnp.array([20.0]*7, dtype=jnp.float32)
+        self.kd_high = 0.5 * jnp.sqrt(self.kp_high)
+        self.kd_low = 2.0 * jnp.sqrt(self.kp_low)
 
         #TODO: these are some dummies for placeholder, change accordingly
         self.reward_weights = {
@@ -90,10 +148,12 @@ class MyMJXEnv():
         obs = jnp.concatenate([data.qpos, data.qvel], axis=0).astype(jnp.float32)  
 
         return MJXState(
+            data=data,
             obs=obs,
             reward=jnp.array(0.0, dtype=jnp.float32),
             done=jnp.array(False),
             t=jnp.array(0, dtype=jnp.int32),
+            action_v_prev=jnp.zeros((7,), dtype=jnp.float32)
         )
 
     def step(self, state: MJXState, action: jnp.ndarray, params=None):
@@ -102,39 +162,64 @@ class MyMJXEnv():
         Replace this placeholder with your real MJX simulation step.
         """
         del params
+        
+        # converting action to jax array
         action = jnp.asarray(action, dtype=jnp.float32)
+        action_in_v = self.v_low + 0.5*(self.v_high - self.v_low) * (action[:7] + 1.0)
+        action_in_kp = self.kp_low + 0.5*(self.kp_high - self.kp_low) * (action[7:14] + 1.0)
+        action_in_kd = self.kd_low + 0.5*(self.kd_high - self.kd_low) * (action[14:21] + 1.0)
+
+        #! I am using velocity as action for my case, convert to torque here
+        action_v_prev = self.v_low + 0.5*(self.v_high - self.v_low) * (state.action_v_prev + 1.0) #* convert to physical units
+        q_ref = state.obs[:7] + action_v_prev * self._dt_env
+        tau = action_in_kp * (q_ref - state.obs[:7]) + action_in_kd * (action_in_v - state.obs[7:14])
+        tau = jnp.clip(tau, self.u_low, self.u_high)
+
+        #! need to repeat the action in a JAX-compatible way
+        def action_repeater(_, data):
+            data = data.replace(ctrl=tau)
+            data = mjx.step(self.mjx_model, data)
+            return data 
+        data_next = jax.lax.fori_loop(0, self.action_repeat, action_repeater, state.data)
+        obs_next = jnp.concatenate([data_next.qpos, data_next.qvel], axis=0).astype(jnp.float32)
+        
+        # increment the step count  
         t = state.t + 1
 
         # Placeholder dynamics/reward.
         next_state = MJXState(
-            obs=jnp.zeros((self.observation_size,), dtype=jnp.float32),
+            data=data_next,
+            obs=obs_next,
             reward=jnp.array(0.0, dtype=jnp.float32),
             done=jnp.array(False),
             t=t,
-        )
-        next_obs = next_state.obs
-        reward = self._total_reward(self._reward_terms(state, action, next_state))
+            action_v_prev=action[:7]
+        ) #! damn! I forgot here the state got reinitialized therefore the env_state from 
+        #! _terminal() with rewards and done=True won't be leaking through the new episode
+
+        next_reward = self._total_reward(self._reward_terms(state, action, next_state))
+        next_state = next_state.replace(reward=next_reward.astype(jnp.float32)) 
+
+        # compute the termination 
         done = t >= self.episode_length
 
         # Optional auto-reset behavior at terminal.
         def _terminal(_):
+            # compute the rewards
             # TODO: need to reset using RNG, only a placeholder here 
-            return self.reset(jax.random.PRNGKey(0))
+            reset_state = self.reset(jax.random.PRNGKey(0))
+            return reset_state.replace(reward=next_reward.astype(jnp.float32),
+                                       done=jnp.array(True)) 
 
         def _non_terminal(_):
-            return MJXState(
-                obs=next_obs,
-                reward=reward.astype(jnp.float32),
-                done=done,
-                t=t,
-            )
+            return next_state
 
         return jax.lax.cond(done, _terminal, _non_terminal, operand=None)
     
     def _reward_terms(self, state, action, next_state, **kwargs):
         del kwargs
         forward = (next_state.obs[0] - state.obs[0]).astype(jnp.float32)
-        ctrl_cost = jnp.sum(action * action, dtype=jnp.float32)
+        ctrl_cost = jnp.sum(action[:7] * action[:7], dtype=jnp.float32)
         return {
             "forward": forward, 
             "ctrl_cost": ctrl_cost
@@ -147,7 +232,7 @@ class MyMJXEnv():
 
 def make_mjx_env():
     """Factory used by training config."""
-    return MyMJXEnv(observation_size=17, action_size=6, episode_length=1000)
+    return MyMJXEnv(observation_size=14, action_size=21, episode_length=1000)
 
 
 # Example wiring with purejaxrl/purejaxrl/ppo_continuous_action.py:
@@ -159,3 +244,4 @@ def make_mjx_env():
 #     "OBSERVATION_SIZE": env.observation_size,  # optional if fields exist
 #     "ACTION_SIZE": env.action_size,            # optional if fields exist
 # }
+
