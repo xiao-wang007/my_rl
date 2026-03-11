@@ -23,6 +23,8 @@ class MJXState:
     action_v_prev: jnp.ndarray
     x_mid: jnp.ndarray  #! end-effector target position mid episode
     v_mid: jnp.ndarray  #! end-effector target velocity mid episode
+    x_final: jnp.ndarray #! end-effector target position at the end of episode
+    mid_done: jnp.ndarray  #! flag indicating if mid target is achieved
 
     # Add task-specific physics fields here, e.g.:
     # qpos: jnp.ndarray
@@ -59,9 +61,26 @@ class MyMJXEnv():
         self.ee_site_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_SITE, "attachment")
         self.mj_model.site_pos[self.ee_site_id] = jnp.array([0.0, 0.0, 0.15], dtype=jnp.float32)
 
-        self.reward_configs = {
-            "alpha1": 1.0,
-            "alpha2": 0.01,
+        #TODO: turn the reward config and weights into a separate config dict and pass in
+        self.r_configs = {
+            "alpha1": jnp.float32(1.0),
+            "alpha2": jnp.float32(0.01),
+            "alpha3": jnp.float32(0.01),
+            "alpha4": jnp.float32(0.01),
+            "k": jnp.float32(0.1),
+            "eps1": jnp.float32(0.05), # cm
+            "k_pos": jnp.float32(1.0),
+            "k_vel": jnp.float32(1.0),
+            "eps_pos": jnp.float32(0.05), # cm
+            "eps_vel": jnp.float32(0.1), # m/s
+            "bonus_mid": jnp.float32(5.0)
+        }
+        #TODO: these are some dummies for placeholder, change accordingly
+        self.r_weights = {
+           "w_pos_mid": jnp.float32(1.0),
+           "w_vel_mid": jnp.float32(1.0),
+           "w_pos_final": jnp.float32(1.0),
+           "w_vel_progress": jnp.float32(1.0),
         }
 
         # mujoco sim dt
@@ -123,11 +142,6 @@ class MyMJXEnv():
         self.kd_high = 0.5 * jnp.sqrt(self.kp_high)
         self.kd_low = 2.0 * jnp.sqrt(self.kp_low)
 
-        #TODO: these are some dummies for placeholder, change accordingly
-        self.reward_weights = {
-           "alpha1": jnp.float32(1.0),
-           "alpha2": jnp.float32(0.01)
-        }
 
     def reset(self, key, params=None):
         """Reset one env.
@@ -165,7 +179,8 @@ class MyMJXEnv():
             reward=jnp.array(0.0, dtype=jnp.float32),
             done=jnp.array(False),
             t=jnp.array(0, dtype=jnp.int32),
-            action_v_prev=jnp.zeros((7,), dtype=jnp.float32)
+            action_v_prev=jnp.zeros((7,), dtype=jnp.float32),
+            mid_done=jnp.array((False, False), dtype=jnp.bool_)
         )
 
     def step(self, state: MJXState, action: jnp.ndarray, params=None):
@@ -209,7 +224,8 @@ class MyMJXEnv():
         ) #! damn! I forgot here the state got reinitialized therefore the env_state from 
         #! _terminal() with rewards and done=True won't be leaking through the new episode
 
-        next_reward = self._total_reward(self._reward_terms(state, action, next_state))
+        # next_reward = self._total_reward(self._reward_terms(state, action, next_state))
+        next_reward = self._compute_rewards_binary(state, action, next_state)
         next_state = next_state.replace(reward=next_reward.astype(jnp.float32)) 
 
         # compute the termination 
@@ -228,36 +244,98 @@ class MyMJXEnv():
 
         return jax.lax.cond(done, _terminal, _non_terminal, operand=None)
     
-    def _reward_terms(self, state, action, next_state):
+    def _compute_rewards_continuous(self, state, action, next_state):
         x_mid = state.x_mid 
         v_mid = state.v_mid
+        x_final = state.x_final 
         x_now = next_state.data.site_xpos[self.ee_site_id]
         v_now = next_state.data.site_xvel[self.ee_site_id]
 
+        # error 
+        e_pos_sqr_mid = jnp.sum((x_now - x_mid)**2)
+        e_vel_sqr_mid = jnp.sum((v_now - v_mid)**2)
+        e_pos_sqr_final = jnp.sum((x_now - x_final)**2)
+
         #* reward 1: end-effector position target at mid episode
-        r_pos_mid = jnp.exp(-self.reward_configs["alpha1"] * jnp.sum((x_now - x_mid)**2))
-        
-        #* reward 2: chaining ee reach mid velocity target with position target
-        # query mjx.model to compute x_now
-        r_pos_mid = jnp.exp(-self.reward_configs["alpha2"] * jnp.sum((x_now - x_mid)**2))
-        r_vel_mid = jnp.exp(-self.reward_configs["alpha3"] * jnp.sum((v_now - v_mid)**2))
+        r_pos_mid = jnp.exp(-self.r_configs["alpha1"] * e_pos_sqr_mid)
+        r_vel_mid = jnp.exp(-self.r_configs["alpha3"] * e_vel_sqr_mid)
         r_vel_gated = r_pos_mid * r_vel_mid
 
-        #* reward 3: 
+        r_mid = (self.r_weights["w_pos_mid"]*r_pos_mid 
+                 + self.r_weights["w_vel_mid"]*r_vel_gated)
+
+        #* reward 3: retract after mid target achieved
+        r_retract = jnp.exp(-self.r_configs["alpha4"] * e_pos_sqr_final)
+        r_retract = self.r_weights["w_pos_final"] * r_retract
+
+        #* soft success based both position and velocity
+        pos_gate = 1.0 / (1.0 + jnp.exp(-self.r_configs["k_pos"] * (self.r_configs["eps_pos"] - e_pos_sqr_mid)))
+        vel_gate = 1.0 / (1.0 + jnp.exp(-self.r_configs["k_vel"] * (self.r_configs["eps_vel"] - e_vel_sqr_mid)))
+        mid_soft_success = pos_gate * vel_gate
+
+        #* with switching
+        reward = (1.0 - mid_soft_success) * r_mid + mid_soft_success * r_retract
+        return reward
+
+    #TODO consider pass reward functions in? does it complies to jax convention?
+    def _compute_rewards_binary(self, state, action, next_state):
+        x_mid = state.x_mid
+        v_mid = state.v_mid
+        x_final = state.x_final
+
+        x_now = next_state.data.site_xpos[self.ee_site_id]
+        v_now = next_state.data.site_xvel[self.ee_site_id]
+
+        pos_err_mid = jnp.linalg.norm(x_now - x_mid)
+        vel_err_mid = jnp.linalg.norm(v_now - v_mid)
+        retract_err = jnp.linalg.norm(x_now - x_final)
+
+        r_pos_mid = jnp.exp(-self.r_configs["alpha1"] * pos_err_mid**2)
+        r_vel_mid = jnp.exp(-self.r_configs["alpha3"] * vel_err_mid**2)
+
+        # Velocity only matters strongly when near the mid target
+        r_vel_gated = r_pos_mid * r_vel_mid
+
+        r_mid = (
+            self.r_weights["w_pos_mid"] * r_pos_mid
+            + self.r_weights["w_vel_mid"] * r_vel_gated
+        )
+        # TODO: add velocit direction reward 
+        dir_speed = jnp.dot(v_now, v_mid)
+        r_mid = r_mid + self.r_weights["w_vel_progress"] * dir_speed
+
+        # Optional: action penalty
+        r_ctrl = -self.r_configs["w_ctrl"] * jnp.sum(action**2)
+
+        mid_achieved_now = (
+            (pos_err_mid < self.r_configs["eps_pos"]) &
+            (vel_err_mid < self.r_configs["eps_vel"])
+        )
+
+        # Persist success once achieved
+        # state.mid_done should be a bool stored in your env state
+        mid_done = state.mid_done | mid_achieved_now
+
+        r_retract = self.r_weights["w_pos_final"] * jnp.exp(
+            -self.r_configs["alpha4"] * retract_err**2
+        )
+
+        # Optional success bonus at the instant the mid target is first achieved
+        first_mid_hit = (~state.mid_done) & mid_achieved_now
+        r_mid_bonus = jnp.where(
+            first_mid_hit,
+            self.r_configs["bonus_mid"],
+            0.0,
+        )
+
+        # TODO: added tilt reward
 
 
-        
-        
-        forward = (next_state.obs[0] - state.obs[0]).astype(jnp.float32)
-        ctrl_cost = jnp.sum(action[:7] * action[:7], dtype=jnp.float32)
-        return {
-            "forward": forward, 
-            "ctrl_cost": ctrl_cost
-        }
-    
-    def _total_reward(self, reward_terms):
-        return sum(self.reward_weights[key] * reward_terms[key] 
-                   for key in self.reward_weights)
+        reward = jnp.where(mid_done, r_retract, r_mid)
+        reward = reward + r_ctrl + r_mid_bonus
+
+        # Return both reward and updated phase flag
+        return reward, mid_done
 
 
 def make_mjx_env():
