@@ -21,6 +21,9 @@ class MJXState:
     done: jnp.ndarray   #! keep done as array for JAX consistency
     t: jnp.ndarray
     action_v_prev: jnp.ndarray
+    x_mid: jnp.ndarray  #! end-effector target position mid episode
+    v_mid: jnp.ndarray  #! end-effector target velocity mid episode
+
     # Add task-specific physics fields here, e.g.:
     # qpos: jnp.ndarray
     # qvel: jnp.ndarray
@@ -45,12 +48,21 @@ class MyMJXEnv():
         FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda')
 
         self.mj_model = mujoco.MjModel.from_xml_path(
-            (FRANKA_ROOT_PATH / 'panda.xml').as_posix())
+            (FRANKA_ROOT_PATH / 'panda_nohand.xml').as_posix())
         self.mj_model.opt.solver = mujoco.mjtSolver.mjSOL_CG
         assert self.mj_model.nu == 7, (
             f"Expected 7 actuators (arm-only model), got nu={self.mj_model.nu}. "
             "Use a no-gripper Panda XML or update controller/action dimensions."
         )
+
+        # overwrite the dummy body "attachment" in the panda_nohand.xml
+        self.ee_site_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_SITE, "attachment")
+        self.mj_model.site_pos[self.ee_site_id] = jnp.array([0.0, 0.0, 0.15], dtype=jnp.float32)
+
+        self.reward_configs = {
+            "alpha1": 1.0,
+            "alpha2": 0.01,
+        }
 
         # mujoco sim dt
         self._dt_sim = 0.004
@@ -113,8 +125,8 @@ class MyMJXEnv():
 
         #TODO: these are some dummies for placeholder, change accordingly
         self.reward_weights = {
-           "forward": 1.0,
-           "ctrl_cost": 0.01,
+           "alpha1": jnp.float32(1.0),
+           "alpha2": jnp.float32(0.01)
         }
 
     def reset(self, key, params=None):
@@ -216,8 +228,26 @@ class MyMJXEnv():
 
         return jax.lax.cond(done, _terminal, _non_terminal, operand=None)
     
-    def _reward_terms(self, state, action, next_state, **kwargs):
-        del kwargs
+    def _reward_terms(self, state, action, next_state):
+        x_mid = state.x_mid 
+        v_mid = state.v_mid
+        x_now = next_state.data.site_xpos[self.ee_site_id]
+        v_now = next_state.data.site_xvel[self.ee_site_id]
+
+        #* reward 1: end-effector position target at mid episode
+        r_pos_mid = jnp.exp(-self.reward_configs["alpha1"] * jnp.sum((x_now - x_mid)**2))
+        
+        #* reward 2: chaining ee reach mid velocity target with position target
+        # query mjx.model to compute x_now
+        r_pos_mid = jnp.exp(-self.reward_configs["alpha2"] * jnp.sum((x_now - x_mid)**2))
+        r_vel_mid = jnp.exp(-self.reward_configs["alpha3"] * jnp.sum((v_now - v_mid)**2))
+        r_vel_gated = r_pos_mid * r_vel_mid
+
+        #* reward 3: 
+
+
+        
+        
         forward = (next_state.obs[0] - state.obs[0]).astype(jnp.float32)
         ctrl_cost = jnp.sum(action[:7] * action[:7], dtype=jnp.float32)
         return {
