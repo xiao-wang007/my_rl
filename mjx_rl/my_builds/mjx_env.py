@@ -156,6 +156,7 @@ class MyMJXEnv():
             MJXState with fields `obs`, `reward`, `done`.
         """
         del params
+        #TODO: domain randomization here
 
         data = mjx.make_data(self.mjx_model)
         data = data.replace(
