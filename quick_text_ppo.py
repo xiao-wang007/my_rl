@@ -1,6 +1,11 @@
 # python - <<'PY'
+import os
 import sys
 import time
+
+os.environ.setdefault("JAX_COMPILATION_CACHE_DIR", "/tmp/jax_compilation_cache")
+os.environ.setdefault("JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS", "0")
+os.makedirs(os.environ["JAX_COMPILATION_CACHE_DIR"], exist_ok=True)
 
 import jax
 import jax.numpy as jnp
@@ -15,13 +20,18 @@ a = jnp.zeros((env.action_size,), dtype=jnp.float32)
 _ = env.step(s, a, {"train_step": jnp.array(0, dtype=jnp.int32)})
 print("env smoke: OK")
 
+#! per training data collected: NUM_ENVS * NUM_STEPS, e.g. 256 * 200 = 51200
+#! minibatch size: NUM_ENVS * NUM_STEPS // NUM_MINIBATCHES, e.g. 51200 // 32 = 1600
+#! per training updates (gradient steps): NUM_MINIBATCHES * UPDATE_EPOCHS 
+#! total training loops: TOTAL_TIMESTEPS // (NUM_ENVS * NUM_STEPS)
+
 config = {
     "LR": 3e-4,
-    "NUM_ENVS": 2048,
+    "NUM_ENVS": 128,
     "NUM_STEPS": 200,
-    "TOTAL_TIMESTEPS": 200 * 2048 * 1,
+    "TOTAL_TIMESTEPS": 200 * 128 * 1, 
     "UPDATE_EPOCHS": 1,
-    "NUM_MINIBATCHES": 2,
+    "NUM_MINIBATCHES": 32,
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
@@ -36,7 +46,33 @@ config = {
     "ANNEAL_LR": False,
     "NORMALIZE_ENV": False,
     "DEBUG": False,
+    "COLLECT_METRICS": False,
+    "WANDB_LOG": False,
+    "WANDB_PROJECT": "my_rl",
+    "WANDB_RUN_NAME": "quick_text_ppo",
+    # Lower unroll speeds up compile time (often at some runtime cost).
+    "GAE_SCAN_UNROLL": 1,
 }
+
+if config.get("WANDB_LOG", False):
+    import wandb
+
+    wandb_config = {}
+    for key, value in config.items():
+        if key == "MJX_ENV":
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            wandb_config[key] = value
+
+    wandb_init_kwargs = {
+        "project": config.get("WANDB_PROJECT", "my_rl"),
+        "config": wandb_config,
+    }
+    run_name = config.get("WANDB_RUN_NAME")
+    if run_name:
+        wandb_init_kwargs["name"] = run_name
+    wandb.init(**wandb_init_kwargs)
+
 train_fn = jax.jit(make_train(config))
 
 compile_key = jax.random.PRNGKey(0)
@@ -55,4 +91,11 @@ execute_sec = time.perf_counter() - t1
 print(f"execute sec: {execute_sec:.2f}")
 
 print("ppo smoke: OK")
+
+if config.get("WANDB_LOG", False):
+    import wandb
+    wandb.finish()
 # PY
+
+
+#? 
