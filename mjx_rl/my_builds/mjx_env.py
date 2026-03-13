@@ -63,12 +63,15 @@ class MyMJXEnv():
             "Use a no-gripper Panda XML or update controller/action dimensions."
         )
 
-        # overwrite the dummy body "attachment" in the panda_nohand.xml
-        self.ee_site_id = mujoco.mj_name2id(self.mj_model, 
-                                            mujoco.mjtObj.mjOBJ_SITE, 
-                                            "attachment_site")
-        self.ee_body_id = self.mj_model.site_bodyid[self.ee_site_id]
-        self.mj_model.site_pos[self.ee_site_id] = jnp.array([0.0, 0.0, 0.15], dtype=jnp.float32)
+        self.ee_body_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_BODY, "ee_point")
+
+        """ may be useful later """
+        # # overwrite the dummy body "attachment" in the panda_nohand.xml
+        # self.ee_site_id = mujoco.mj_name2id(self.mj_model, 
+        #                                     mujoco.mjtObj.mjOBJ_SITE, 
+        #                                     "attachment_site")
+        # self.ee_body_id = self.mj_model.site_bodyid[self.ee_site_id]
+        # self.mj_model.site_pos[self.ee_site_id] = jnp.array([0.0, 0.0, 0.15], dtype=jnp.float32)
 
         assert r_configs is not None, "r_configs must be provided"
         assert r_weights is not None, "r_weights must be provided"
@@ -305,14 +308,16 @@ class MyMJXEnv():
         v_mid = next_state.v_mid
         x_final = next_state.x_final
 
-        x_next = next_state.data.site_xpos[self.ee_site_id]
+        x_next = next_state.data.xpos[self.ee_body_id]
 
-        # v_now (linear) of the end-effector using jacobian
-        jacp, _ = mjx.jac(self.mjx_model, next_state.data, 
-                          next_state.data.site_xpos[self.ee_site_id],
-                          self.ee_body_id)
-        # mjx.jac returns jacp with shape (nv, 3), so use qvel @ jacp.
-        v_next = next_state.data.qvel @ jacp
+        #! no need to compute explicitly, as mjx.step already gives it
+        # # v_now (linear) of the end-effector using jacobian
+        # jacp, _ = mjx.jac(self.mjx_model, next_state.data, 
+        #                   next_state.data.site_xpos[self.ee_site_id],
+        #                   self.ee_body_id)
+        # # mjx.jac returns jacp with shape (nv, 3), so use qvel @ jacp.
+        # v_next = next_state.data.qvel @ jacp
+        v_next = next_state.data.cvel[self.ee_body_id, 3:] 
 
         pos_err_mid = jnp.linalg.norm(x_next - x_mid)
         vel_err_mid = jnp.linalg.norm(v_next - v_mid)
@@ -325,7 +330,7 @@ class MyMJXEnv():
         r_vel_gated = r_pos_mid * r_vel_mid
             
         # tilting reward at mid episode
-        R_w_ee = next_state.data.site_xmat[self.ee_site_id].reshape(3, 3)
+        R_w_ee = next_state.data.xmat[self.ee_body_id].reshape(3, 3)
         zhat_ee_w = R_w_ee[:, 2] 
 
         # v_ee_horizontal

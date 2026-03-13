@@ -18,7 +18,7 @@ Thumbs.db
 
 # MuJoCo assets
 # /mjx_rl/my_builds/mujoco_menagerie/
-/mujoco_menagerie/
+# /mujoco_menagerie/
 
 # # Local external repo
 # /purejaxrl//mujoco_menagerie/
