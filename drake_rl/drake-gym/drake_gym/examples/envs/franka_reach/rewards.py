@@ -34,6 +34,13 @@ class CompositeReward():
             'v_prev': v_prev,
         }
 
+        # Cache MJX translated terms once per step if any mjx_* component exists.
+        if any(
+            callable(c.get("fn")) and getattr(c["fn"], "__name__", "").startswith("mjx_")
+            for c in self.components
+        ):
+            kwargs["_mjx_terms"] = _mjx_reward_terms(**kwargs)
+
         for compo in self.components:
             # to be more general
             r = compo['fn'](**kwargs)  # each fn takes only what needed as inputs
@@ -254,3 +261,195 @@ def velocity_damping_near_target(state, plant, plant_context, target_pos,
         return -coeff * np.dot(v, v)
     return 0.0
     
+
+########## For striking task #################################
+
+# MJX-translated reward defaults from mjx_rl/my_builds/reward_weights_and_configs.py
+MJX_R_CONFIGS = {
+    "alpha1": np.float32(1.0),
+    "alpha3": np.float32(0.01),
+    "alpha4": np.float32(0.01),
+    "eps_pos": np.float32(0.05),
+    "eps_vel": np.float32(0.1),
+    "eps_tilt": np.float32(0.1),
+    "alpha_tilt": np.float32(1.0),
+    "beta_tilt": np.float32(2.0),
+    "eps_vmag": np.float32(0.05),
+}
+
+MJX_R_WEIGHTS = {
+    "w_pos_mid": np.float32(1.0),
+    "w_vel_mid": np.float32(1.0),
+    "w_pos_final": np.float32(1.0),
+    "w_vel_progress": np.float32(0.05),
+    "w_action_rate": np.float32(0.001),
+    "w_tilt": np.float32(1.0),
+}
+
+
+def _ee_pose_velocity_drake(state, plant, plant_context, ee_frame_name="panda_link8"):
+    q = state[:7]
+    v = state[7:14]
+    plant.SetPositions(plant_context, q)
+    plant.SetVelocities(plant_context, v)
+    ee_frame = plant.GetFrameByName(ee_frame_name)
+    world_frame = plant.world_frame()
+    ee_pose = ee_frame.CalcPoseInWorld(plant_context)
+    p_ee_w = ee_pose.translation()
+    r_ee_w = ee_pose.rotation().matrix()
+
+    from pydrake.all import JacobianWrtVariable
+
+    jacp = plant.CalcJacobianTranslationalVelocity(
+        plant_context,
+        JacobianWrtVariable.kV,
+        ee_frame,
+        np.zeros(3),
+        world_frame,
+        world_frame,
+    )
+    v_ee_w = jacp @ v
+    return p_ee_w, r_ee_w, v_ee_w
+
+
+def _mjx_reward_terms(
+    state,
+    plant,
+    plant_context,
+    target_pos=None,
+    action=None,
+    v_prev=None,
+    x_mid=None,
+    v_mid=None,
+    x_final=None,
+    r_configs=None,
+    r_weights=None,
+):
+    cfg = MJX_R_CONFIGS if r_configs is None else r_configs
+    w = MJX_R_WEIGHTS if r_weights is None else r_weights
+    x_mid = np.array([0.4, 0.4, 0.05]) if x_mid is None else np.asarray(x_mid)
+    v_mid = np.zeros(3) if v_mid is None else np.asarray(v_mid)
+    if target_pos is not None:
+        x_final = np.asarray(target_pos)
+    else:
+        x_final = np.array([0.4, 0.4, 0.25]) if x_final is None else np.asarray(x_final)
+
+    x_next, r_ee_w, v_next = _ee_pose_velocity_drake(
+        state, plant, plant_context, ee_frame_name="panda_link8"
+    )
+    zhat_w = np.array([0.0, 0.0, 1.0], dtype=float)
+    zhat_w_opp = np.array([0.0, 0.0, -1.0], dtype=float)
+
+    pos_err_mid = np.linalg.norm(x_next - x_mid)
+    vel_err_mid = np.linalg.norm(v_next - v_mid)
+    retract_err = np.linalg.norm(x_next - x_final)
+
+    r_pos_mid = np.exp(-cfg["alpha1"] * pos_err_mid**2)
+    r_vel_mid = np.exp(-cfg["alpha3"] * vel_err_mid**2)
+    r_vel_gated = r_pos_mid * r_vel_mid
+
+    zhat_ee_w = r_ee_w[:, 2]
+    v_hori = v_next - np.dot(v_next, zhat_w) * zhat_w
+    v_hori_hat = v_hori / (np.linalg.norm(v_hori) + cfg["eps_tilt"])
+    z_tilted_raw = zhat_w_opp + cfg["beta_tilt"] * v_hori_hat
+    z_tilted = z_tilted_raw / (np.linalg.norm(z_tilted_raw) + cfg["eps_tilt"])
+    align = np.dot(zhat_ee_w, z_tilted)
+    r_tilt = np.exp(-cfg["alpha_tilt"] * (1.0 - align))
+    r_tilt_gated = r_pos_mid * r_tilt
+
+    v_mid_hat = v_mid / (np.linalg.norm(v_mid) + cfg["eps_vel"])
+    v_next_hat = v_next / (np.linalg.norm(v_next) + cfg["eps_vel"])
+    dir_speed = np.dot(v_next_hat, v_mid_hat)
+    speed_gate = 1.0 if np.linalg.norm(v_mid) > cfg["eps_vmag"] else 0.0
+    r_dir = r_pos_mid * w["w_vel_progress"] * dir_speed * speed_gate
+
+    v_cmd_now = np.asarray(action[:7], dtype=float) if action is not None else np.asarray(state[7:14], dtype=float)
+    v_cmd_prev = np.asarray(v_prev, dtype=float) if v_prev is not None else np.zeros(7)
+    r_action_rate = -w["w_action_rate"] * np.sum((v_cmd_now - v_cmd_prev) ** 2)
+
+    mid_achieved_now = (pos_err_mid < cfg["eps_pos"]) and (vel_err_mid < cfg["eps_vel"])
+    r_retract = w["w_pos_final"] * np.exp(-cfg["alpha4"] * retract_err**2)
+    r_mid_total = (
+        w["w_pos_mid"] * r_pos_mid
+        + w["w_vel_mid"] * r_vel_gated
+        + w["w_tilt"] * r_tilt_gated
+        + r_dir
+    )
+
+    return {
+        "r_pos_mid": float(r_pos_mid),
+        "r_vel_gated": float(r_vel_gated),
+        "r_tilt_gated": float(r_tilt_gated),
+        "r_dir": float(r_dir),
+        "r_retract": float(r_retract),
+        "r_action_rate": float(r_action_rate),
+        "r_mid_total": float(r_mid_total),
+        "mid_achieved_now": float(mid_achieved_now),
+    }
+
+
+def mjx_mid_position_reward(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    w = kwargs.get("r_weights", MJX_R_WEIGHTS)
+    return float(w["w_pos_mid"] * terms["r_pos_mid"])
+
+
+def mjx_mid_velocity_gated_reward(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    w = kwargs.get("r_weights", MJX_R_WEIGHTS)
+    return float(w["w_vel_mid"] * terms["r_vel_gated"])
+
+
+def mjx_mid_tilt_gated_reward(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    w = kwargs.get("r_weights", MJX_R_WEIGHTS)
+    return float(w["w_tilt"] * terms["r_tilt_gated"])
+
+
+def mjx_mid_direction_progress_reward(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    return float(terms["r_dir"])
+
+
+def mjx_retract_position_reward(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    return float(terms["r_retract"])
+
+
+def mjx_action_rate_penalty(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    return float(terms["r_action_rate"])
+
+
+def mjx_mid_achieved_indicator(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    return float(terms["mid_achieved_now"])
+
+
+def mjx_mid_total_reward(state, plant, plant_context, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    return float(terms["r_mid_total"])
+
+
+def mjx_binary_phase_reward(state, plant, plant_context, mid_done=False, **kwargs):
+    terms = kwargs.get("_mjx_terms")
+    if terms is None:
+        terms = _mjx_reward_terms(state, plant, plant_context, **kwargs)
+    core = terms["r_retract"] if bool(mid_done) else terms["r_mid_total"]
+    return float(core + terms["r_action_rate"])
