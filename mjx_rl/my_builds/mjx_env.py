@@ -53,7 +53,7 @@ class MyMJXEnv():
         self.init_qpos = qpos_init if qpos_init is not None else jnp.zeros((7,), dtype=jnp.float32)
 
         # load the franka model #TODO: currently only arm, may need add object later
-        FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda')
+        FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda') # relative path, resolves to where I call the script
 
         self.mj_model = mujoco.MjModel.from_xml_path(
             (FRANKA_ROOT_PATH / 'panda_nohand.xml').as_posix())
@@ -105,6 +105,12 @@ class MyMJXEnv():
         # joint 1-4 
         self.mj_model.actuator_ctrlrange[:4, 0] = -81.0
         self.mj_model.actuator_ctrlrange[:4, 1] = 81.0
+        
+        # #
+        # self.q_max = jnp.array([2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973], dtype=jnp.float32) 
+        # self.q_min = jnp.array([-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973], dtype=jnp.float32)
+        # self.v_max = jnp.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61], dtype=jnp.float32)
+        # self.v_min = -self.v_max
 
         # joint 5-7
         self.mj_model.actuator_ctrlrange[4:7, 0] = -12.0
@@ -125,7 +131,7 @@ class MyMJXEnv():
         self.v_low = -self.v_high
 
         # get joint limits
-        self.limit_margin = 1e-3
+        self.limit_margin = 1e-2
         self.qpos_low = jnp.array(self.mj_model.jnt_range[:, 0])
         self.qpos_high = jnp.array(self.mj_model.jnt_range[:, 1])
         
@@ -136,8 +142,11 @@ class MyMJXEnv():
         self.dkd_max = jnp.array([20.0]*7, dtype=jnp.float32)
 
         #TODO: env/train steps, is this reasonable?
-        self.gain_schedule_start = jnp.float32(2e5) # gains are scheduled from step 200k 
-        self.gain_schedule_end = jnp.float32(8e5)
+        #! based on my current setup, global_train_step is counted per step across
+        #! all envs. Then in total I have NUM_UPDATES*NUM_STEPS countings.
+        #! the number below is a 4/6 split of NUM_UPDATES*NUM_STEPS 
+        self.gain_schedule_start = jnp.float32(14640) 
+        self.gain_schedule_end = jnp.float32(24400)
 
         # some quantities for reward computation 
         self._zhat_w_opp = jnp.array([0.0, 0.0, -1.0], dtype=jnp.float32) 
@@ -230,7 +239,7 @@ class MyMJXEnv():
 
         #! I am using velocity as action for my case, convert to torque here
         action_v_prev = self.v_low + 0.5*(self.v_high - self.v_low) * (state.action_v_prev + 1.0) #* convert to physical units
-        q_ref = state.obs[:7] + action_v_prev * self._dt_env
+        q_ref = state.obs[:7] + action_v_prev * self._dt_env #TODO: try using action_v than action_v_prev 
         tau = kp * (q_ref - state.obs[:7]) + kd * (action_in_v - state.obs[7:14])
         tau = jnp.clip(tau, self.u_low, self.u_high)
 
@@ -268,6 +277,11 @@ class MyMJXEnv():
 
         # compute the termination 
         done = t >= self.episode_length
+        done = done | (~jnp.all(jnp.isfinite(next_state.obs)))  # Terminate if any obs is non-finite
+        done = done | jnp.any(next_state.obs[:7] < self.qpos_low + self.limit_margin) 
+        done = done | jnp.any(next_state.obs[:7] > self.qpos_high - self.limit_margin)
+        done = done | jnp.any(next_state.obs[7:14] < self.v_low + self.limit_margin)
+        done = done | jnp.any(next_state.obs[7:14] > self.v_high - self.limit_margin)
 
         # Optional auto-reset behavior at terminal.
         def _terminal(_):
@@ -297,7 +311,8 @@ class MyMJXEnv():
         jacp, _ = mjx.jac(self.mjx_model, next_state.data, 
                           next_state.data.site_xpos[self.ee_site_id],
                           self.ee_body_id)
-        v_next = next_state.data.qvel @ jacp #! jacp is (nv, 3)
+        # mjx.jac returns jacp with shape (nv, 3), so use qvel @ jacp.
+        v_next = next_state.data.qvel @ jacp
 
         pos_err_mid = jnp.linalg.norm(x_next - x_mid)
         vel_err_mid = jnp.linalg.norm(v_next - v_mid)
@@ -372,7 +387,7 @@ class MyMJXEnv():
 
 def make_mjx_env():
     """Factory used by training config."""
-    return MyMJXEnv(observation_size=14, action_size=21, episode_length=1000)
+    return MyMJXEnv(observation_size=14, action_size=21, episode_length=1000, r_configs=r_configs1, r_weights=r_weights1)
 
 
 # Example wiring with purejaxrl/purejaxrl/ppo_continuous_action.py:

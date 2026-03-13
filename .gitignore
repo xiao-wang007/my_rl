@@ -20,4 +20,4 @@ Thumbs.db
 /mjx_rl/my_builds/mujoco_menagerie/
 
 # # Local external repo
-# /purejaxrl/
+# /purejaxrl//mujoco_menagerie/
