@@ -56,15 +56,21 @@ config_base = {
     "ANNEAL_LR": False,
     "NORMALIZE_ENV": False,
     "DEBUG": True,
+    # Host debug callback every N PPO updates (1 = every update).
+    "DEBUG_PRINT_INTERVAL_UPDATES": 10,
     "COLLECT_METRICS": False,
     "WANDB_LOG": True,
+    # Host wandb callback every N PPO updates (1 = every update).
+    "WANDB_LOG_INTERVAL_UPDATES": 10,
     "WANDB_PROJECT": "my_rl",
     "WANDB_RUN_NAME": "train_franka_ppo",
     # Lower unroll speeds up compile time (often at some runtime cost).
     "GAE_SCAN_UNROLL": 4,
     # Periodic checkpoint every N PPO updates (inside the scan, no recompile).
     # 0 = disabled. Callback is injected by _run_once before compilation.
-    "CHECKPOINT_INTERVAL_UPDATES": 50,
+    "CHECKPOINT_INTERVAL_UPDATES": 200,
+    # Print approximate per-update split: compute vs host callbacks.
+    "PROFILE_CALLBACK_OVERHEAD": True,
 }
 
 #! With NUM_STEPS = 20, set GAE_SCAN_UNROLL to 4.
@@ -90,8 +96,59 @@ def _save_checkpoint_from_out(out, target_total_timesteps: int) -> int:
     )
 
 
-def _save_checkpoint_core(train_state, global_train_step, target_total_timesteps) -> int:
+def _new_perf_stats() -> dict:
+    return {
+        "wandb_calls": 0,
+        "wandb_host_sec": 0.0,
+        "debug_calls": 0,
+        "debug_host_sec": 0.0,
+        "checkpoint_calls": 0,
+        "checkpoint_host_sec": 0.0,
+    }
+
+
+def _print_perf_breakdown(execute_sec: float, num_updates: int, perf_stats: dict | None):
+    if perf_stats is None or num_updates <= 0:
+        return
+
+    wandb_sec = float(perf_stats.get("wandb_host_sec", 0.0))
+    debug_sec = float(perf_stats.get("debug_host_sec", 0.0))
+    ckpt_sec = float(perf_stats.get("checkpoint_host_sec", 0.0))
+    callback_sec = wandb_sec + debug_sec + ckpt_sec
+    approx_compute_sec = max(execute_sec - callback_sec, 0.0)
+
+    per_update_total_ms = 1000.0 * execute_sec / num_updates
+    per_update_callback_ms = 1000.0 * callback_sec / num_updates
+    per_update_compute_ms = 1000.0 * approx_compute_sec / num_updates
+    callback_pct = 100.0 * callback_sec / execute_sec if execute_sec > 0 else 0.0
+
+    print("\ncallback timing (approx):")
+    print(
+        f"  per-update total:    {per_update_total_ms:.3f} ms "
+        f"({num_updates} updates)"
+    )
+    print(f"  per-update compute:  {per_update_compute_ms:.3f} ms")
+    print(
+        f"  per-update callbacks:{per_update_callback_ms:.3f} ms "
+        f"({callback_pct:.1f}% of execute)"
+    )
+    print(
+        "  callback totals:"
+        f" wandb={wandb_sec:.3f}s ({int(perf_stats.get('wandb_calls', 0))} calls),"
+        f" debug={debug_sec:.3f}s ({int(perf_stats.get('debug_calls', 0))} calls),"
+        f" checkpoint={ckpt_sec:.3f}s ({int(perf_stats.get('checkpoint_calls', 0))} calls)"
+    )
+
+
+def _save_checkpoint_core(
+    train_state,
+    global_train_step,
+    target_total_timesteps,
+    perf_stats: dict | None = None,
+    include_in_profile: bool = False,
+) -> int:
     """Shared logic for saving a checkpoint."""
+    t0 = time.perf_counter()
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
         "train_state": train_state,
@@ -110,13 +167,24 @@ def _save_checkpoint_core(train_state, global_train_step, target_total_timesteps
     with CHECKPOINT_META_FILE.open("w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
     print(f"  periodic checkpoint: {env_transition_step}/{int(target_total_timesteps)} env transitions")
+    if include_in_profile and perf_stats is not None:
+        perf_stats["checkpoint_calls"] = int(perf_stats.get("checkpoint_calls", 0)) + 1
+        perf_stats["checkpoint_host_sec"] = float(
+            perf_stats.get("checkpoint_host_sec", 0.0)
+        ) + (time.perf_counter() - t0)
     return env_transition_step
 
 
-def _make_checkpoint_callback(target_total_timesteps: int):
+def _make_checkpoint_callback(target_total_timesteps: int, perf_stats: dict | None = None):
     """Return a callback for jax.debug.callback inside the training scan."""
     def _cb(train_state, global_train_step):
-        _save_checkpoint_core(train_state, global_train_step, target_total_timesteps)
+        _save_checkpoint_core(
+            train_state,
+            global_train_step,
+            target_total_timesteps,
+            perf_stats=perf_stats,
+            include_in_profile=True,
+        )
     return _cb
 
 
@@ -125,10 +193,25 @@ def _run_once(remaining_timesteps: int, resume: bool):
     run_config["TOTAL_TIMESTEPS"] = int(remaining_timesteps)
     if resume and CHECKPOINT_FILE.exists():
         run_config["RESUME_CHECKPOINT_PATH"] = str(CHECKPOINT_FILE)
+    num_updates = (
+        run_config["TOTAL_TIMESTEPS"]
+        // run_config["NUM_STEPS"]
+        // run_config["NUM_ENVS"]
+    )
+
+    perf_stats = None
+    if run_config.get("PROFILE_CALLBACK_OVERHEAD", False):
+        perf_stats = _new_perf_stats()
+        run_config["PROFILE_PERF"] = True
+        run_config["PERF_STATS"] = perf_stats
+    else:
+        run_config["PROFILE_PERF"] = False
 
     # Inject checkpoint callback (called from jax.debug.callback inside scan).
     if run_config.get("CHECKPOINT_INTERVAL_UPDATES", 0) > 0:
-        run_config["CHECKPOINT_FN"] = _make_checkpoint_callback(TOTAL_TIMESTEPS)
+        run_config["CHECKPOINT_FN"] = _make_checkpoint_callback(
+            TOTAL_TIMESTEPS, perf_stats=perf_stats
+        )
 
     train_fn = jax.jit(make_train(run_config))
 
@@ -146,6 +229,7 @@ def _run_once(remaining_timesteps: int, resume: bool):
     )
     execute_sec = time.perf_counter() - t1
     print(f"\nexecute sec: {execute_sec:.2f}")
+    _print_perf_breakdown(execute_sec, num_updates, perf_stats)
     return out
 
 
