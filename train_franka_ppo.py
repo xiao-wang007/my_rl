@@ -29,7 +29,7 @@ print("env smoke: OK")
 #! per training updates (gradient steps): NUM_MINIBATCHES * UPDATE_EPOCHS
 #! total training loops: TOTAL_TIMESTEPS // (NUM_ENVS * NUM_STEPS)
 
-TOTAL_TIMESTEPS = 200 * 2048 * 50 # = 20_480_000, i.e. 20M env transitions
+TOTAL_TIMESTEPS = 20 * 512 * 500 # = 5_120_000, i.e. ~5M env transitions
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -37,11 +37,11 @@ CHECKPOINT_META_FILE = CHECKPOINT_DIR / "train_franka_ppo.meta.json"
 
 config_base = {
     "LR": 3e-4,
-    "NUM_ENVS": 2048,
+    "NUM_ENVS": 512,           # 1080Ti has 11GB; 2048 OOMs
     "NUM_STEPS": 20,
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,
-    "NUM_MINIBATCHES": 16,
+    "NUM_MINIBATCHES": 8,     # minibatch = 512*20/8 = 1280
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
