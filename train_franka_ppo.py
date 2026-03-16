@@ -72,7 +72,7 @@ config_base = {
     #* Higher = fewer GPU→host sync stalls. 50 is a good balance.
     "DEBUG_PRINT_INTERVAL_UPDATES": 50,
     "COLLECT_METRICS": False,
-    "WANDB_LOG": True,
+    "WANDB_LOG": False,
     
     #* Host wandb callback every N PPO updates (1 = every update).
     #* Each callback is a jax.debug.callback → GPU stall + HTTP request.
@@ -86,7 +86,7 @@ config_base = {
     #* Periodic checkpoint every N PPO updates (inside the scan, no recompile).
     #* Each checkpoint is a full GPU→host→disk round trip. Keep infrequent.
     #* 0 = disabled.
-    "CHECKPOINT_INTERVAL_UPDATES": 500,
+    "CHECKPOINT_INTERVAL_UPDATES": 0,
     
     #* Print approximate per-update split: compute vs host callbacks.
     "PROFILE_CALLBACK_OVERHEAD": True,
