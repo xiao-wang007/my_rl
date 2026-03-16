@@ -24,9 +24,9 @@ class MJXState:
     done: jnp.ndarray   #! keep done as array for JAX consistency
     t: jnp.ndarray
     action_v_prev: jnp.ndarray
-    x_mid: jnp.ndarray  #! end-effector target position mid episode
-    v_mid: jnp.ndarray  #! end-effector target velocity mid episode
-    x_final: jnp.ndarray #! end-effector target position at the end of episode
+    x_ee_mid: jnp.ndarray  #! end-effector target position mid episode
+    v_ee_mid: jnp.ndarray  #! end-effector target velocity mid episode
+    x_ee_final: jnp.ndarray #! end-effector target position at the end of episode
     mid_done: jnp.ndarray #! flag indicating if mid target is achieved
     rng: jnp.ndarray
 
@@ -50,7 +50,7 @@ class MyMJXEnv():
         self.observation_size = observation_size
         self.action_size = action_size
         self.episode_length = episode_length
-        self.init_qpos = qpos_init if qpos_init is not None else jnp.zeros((7,), dtype=jnp.float32)
+
 
         # load the franka model #TODO: currently only arm, may need add object later
         FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda') # relative path, resolves to where I call the script
@@ -133,10 +133,19 @@ class MyMJXEnv():
         self.v_high = jnp.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61], dtype=jnp.float32)
         self.v_low = -self.v_high
 
-        # get joint limits
+        # get joint position limits
         self.limit_margin = 1e-2
         self.qpos_low = jnp.array(self.mj_model.jnt_range[:, 0])
         self.qpos_high = jnp.array(self.mj_model.jnt_range[:, 1])
+
+        if qpos_init is not None:
+            qpos_init = jnp.asarray(qpos_init, dtype=jnp.float32)
+            bounded_up = qpos_init < (self.qpos_high - self.limit_margin)
+            bounded_low = qpos_init > (self.qpos_low + self.limit_margin)
+            assert jnp.all(bounded_up & bounded_low), "qpos_init is out of bounds"
+            self.init_qpos = qpos_init
+        else:
+            self.init_qpos = jnp.array([0.9207,  0.2574, -0.9527, -2.0683,  0.2799,  2.1147, 2.], dtype=jnp.float32)
         
         # gain bounds 
         self.kp_base = jnp.array([100.0]*7, dtype=jnp.float32)
@@ -191,11 +200,11 @@ class MyMJXEnv():
 
         key, key_vel = jax.random.split(key)
 
-        x_mid = jnp.array([0.4, 0.4, 0.05], dtype=jnp.float32)
-        x_final = jnp.array([0.4, 0.4, 0.25], dtype=jnp.float32)
+        x_ee_mid = jnp.array([0.4, 0.4, 0.05], dtype=jnp.float32)
+        x_ee_final = jnp.array([0.4, 0.4, 0.25], dtype=jnp.float32)
 
         # TODO: this range should be informed by the energy equation with the target x y theta
-        v_mid = jax.random.uniform(key_vel, 
+        v_ee_mid = jax.random.uniform(key_vel, 
                                    (3,), 
                                    minval=jnp.array([-0.5, -0.5, 0.]), 
                                    maxval=jnp.array([ 0.5,  0.5, 0.])).astype(jnp.float32)
@@ -208,9 +217,9 @@ class MyMJXEnv():
             t=jnp.array(0, dtype=jnp.int32),
             action_v_prev=jnp.zeros((7,), dtype=jnp.float32),
             mid_done=jnp.array(False, dtype=jnp.bool_),
-            x_final=x_final,
-            x_mid=x_mid,
-            v_mid=v_mid,
+            x_ee_final=x_ee_final,
+            x_ee_mid=x_ee_mid,
+            v_ee_mid=v_ee_mid,
             rng=key,
         )
 
@@ -252,7 +261,21 @@ class MyMJXEnv():
             data = mjx.step(self.mjx_model, data)
             return data 
         data_next = jax.lax.fori_loop(0, self.action_repeat, action_repeater, state.data)
-        obs_next = jnp.concatenate([data_next.qpos, data_next.qvel], axis=0).astype(jnp.float32)
+
+
+        #TODO: expanding gradually for curriculum learning.
+        #* currently fixing the observation for x_mid, and x_final
+        x_ee_next = data_next.xpos[self.ee_body_id]
+        v_ee_next = data_next.qvel[self.ee_body_id]
+        obs_next = jnp.concatenate([data_next.qpos, 
+                                    data_next.qvel,
+                                    state.x_ee_mid - x_ee_next, # dx_mid
+                                    state.v_ee_mid - v_ee_next, # dv_mid
+                                    state.x_ee_final - x_ee_next, # dx_final
+                                    state.mid_done.astype(jnp.float32) # converting to scalar
+                                    ], 
+                                    axis=0).astype(jnp.float32)
+        
         
         # increment the step count  
         t = state.t + 1
@@ -265,9 +288,9 @@ class MyMJXEnv():
             done=jnp.array(False),
             t=t,
             action_v_prev=action[:7],
-            x_mid=state.x_mid,
-            v_mid=state.v_mid,
-            x_final=state.x_final,
+            x_ee_mid=state.x_ee_mid,
+            v_ee_mid=state.v_ee_mid,
+            x_ee_final=state.x_ee_final,
             mid_done=state.mid_done,
             rng=rng,
         ) #! damn! I forgot here the state got reinitialized therefore the env_state from 
@@ -304,9 +327,9 @@ class MyMJXEnv():
 
     def _compute_rewards_binary(self, state, action, next_state):
         """ should always use next_state for reward """
-        x_mid = next_state.x_mid
-        v_mid = next_state.v_mid
-        x_final = next_state.x_final
+        x_ee_mid = next_state.x_ee_mid
+        v_ee_mid = next_state.v_ee_mid
+        x_ee_final = next_state.x_ee_final
 
         x_next = next_state.data.xpos[self.ee_body_id]
 
@@ -319,9 +342,9 @@ class MyMJXEnv():
         # v_next = next_state.data.qvel @ jacp
         v_next = next_state.data.cvel[self.ee_body_id, 3:] 
 
-        pos_err_mid = jnp.linalg.norm(x_next - x_mid)
-        vel_err_mid = jnp.linalg.norm(v_next - v_mid)
-        retract_err = jnp.linalg.norm(x_next - x_final)
+        pos_err_mid = jnp.linalg.norm(x_next - x_ee_mid)
+        vel_err_mid = jnp.linalg.norm(v_next - v_ee_mid)
+        retract_err = jnp.linalg.norm(x_next - x_ee_final)
 
         r_pos_mid = jnp.exp(-self._r_configs["alpha1"] * pos_err_mid**2)
         r_vel_mid = jnp.exp(-self._r_configs["alpha3"] * vel_err_mid**2)
@@ -355,13 +378,13 @@ class MyMJXEnv():
         )
 
         # velocity direction at mid episode (use directional v to bound it)
-        v_mid_hat = v_mid / (jnp.linalg.norm(v_mid) + self._r_configs["eps_vel"])
+        v_ee_mid_hat = v_ee_mid / (jnp.linalg.norm(v_ee_mid) + self._r_configs["eps_vel"])
         v_next_hat = v_next / (jnp.linalg.norm(v_next) + self._r_configs["eps_vel"])
-        dir_speed = jnp.dot(v_next_hat, v_mid_hat)
+        dir_speed = jnp.dot(v_next_hat, v_ee_mid_hat)
 
         # gating on speed and direction
-        v_mid_norm = jnp.linalg.norm(v_mid)
-        speed_gate = jnp.where(v_mid_norm > self._r_configs["eps_vmag"], 1.0, 0.0)
+        v_ee_mid_norm = jnp.linalg.norm(v_ee_mid)
+        speed_gate = jnp.where(v_ee_mid_norm > self._r_configs["eps_vmag"], 1.0, 0.0)
         r_dir = r_pos_mid * self._r_weights["w_vel_progress"] * dir_speed * speed_gate 
         r_mid = r_mid + r_dir
 
@@ -392,7 +415,7 @@ class MyMJXEnv():
 
 def make_mjx_env():
     """Factory used by training config."""
-    return MyMJXEnv(observation_size=14, action_size=21, episode_length=1000, r_configs=r_configs1, r_weights=r_weights1)
+    return MyMJXEnv(observation_size=14, action_size=21, episode_length=200, r_configs=r_configs1, r_weights=r_weights1)
 
 
 # Example wiring with purejaxrl/purejaxrl/ppo_continuous_action.py:
