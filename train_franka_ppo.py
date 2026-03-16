@@ -21,7 +21,14 @@ from ppo_continuous_action import make_train
 env = make_mjx_env()
 s = env.reset(jax.random.PRNGKey(0))
 a = jnp.zeros((env.action_size,), dtype=jnp.float32)
-_ = env.step(s, a, {"train_step": jnp.array(0, dtype=jnp.int32)})
+_ = env.step(
+    s,
+    a,
+    {
+        "train_step": jnp.array(0, dtype=jnp.int32),
+        "train_progress": jnp.array(0.0, dtype=jnp.float32),
+    },
+)
 print("env smoke: OK")
 
 #! per training data collected: NUM_ENVS * NUM_STEPS, e.g. 256 * 200 = 51200
@@ -29,7 +36,7 @@ print("env smoke: OK")
 #! per training updates (gradient steps): NUM_MINIBATCHES * UPDATE_EPOCHS
 #! total training loops: TOTAL_TIMESTEPS // (NUM_ENVS * NUM_STEPS)
 
-TOTAL_TIMESTEPS = 20 * 256 * 500 # = 5_120_000, i.e. ~5M env transitions
+TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -40,6 +47,9 @@ config_base = {
     "NUM_ENVS": 256,           # 1080Ti has 11GB; 2048 OOMs
     "NUM_STEPS": 20,
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
+    
+    #* Keep a stable total-timestep target for progress scheduling across resumes.
+    "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,
     "NUM_MINIBATCHES": 4,     # minibatch = 256*20/4 = 1280
     "GAMMA": 0.99,
@@ -56,21 +66,30 @@ config_base = {
     "ANNEAL_LR": False,
     "NORMALIZE_ENV": False,
     "DEBUG": True,
-    # Host debug callback every N PPO updates (1 = every update).
+    
+    #* Host debug callback every N PPO updates (1 = every update).
     "DEBUG_PRINT_INTERVAL_UPDATES": 10,
     "COLLECT_METRICS": False,
     "WANDB_LOG": True,
-    # Host wandb callback every N PPO updates (1 = every update).
+    
+    #* Host wandb callback every N PPO updates (1 = every update).
     "WANDB_LOG_INTERVAL_UPDATES": 10,
     "WANDB_PROJECT": "my_rl",
-    "WANDB_RUN_NAME": "train_franka_ppo",
-    # Lower unroll speeds up compile time (often at some runtime cost).
+    "WANDB_RUN_NAME": "franka_ppo_v1",
+    
+    #* Lower unroll speeds up compile time (often at some runtime cost).
     "GAE_SCAN_UNROLL": 4,
-    # Periodic checkpoint every N PPO updates (inside the scan, no recompile).
-    # 0 = disabled. Callback is injected by _run_once before compilation.
+    
+    #* Periodic checkpoint every N PPO updates (inside the scan, no recompile).
+    #* 0 = disabled. Callback is injected by _run_once before compilation.
     "CHECKPOINT_INTERVAL_UPDATES": 200,
-    # Print approximate per-update split: compute vs host callbacks.
+    
+    #* Print approximate per-update split: compute vs host callbacks.
     "PROFILE_CALLBACK_OVERHEAD": True,
+
+    #* PD gain as actions, scheduling
+    "GAIN_SCHEDULE_SPLIT": 0.5,
+    "GAIN_SCHEDULE_END": 8.0,
 }
 
 #! With NUM_STEPS = 20, set GAE_SCAN_UNROLL to 4.

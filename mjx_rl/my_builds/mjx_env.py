@@ -42,7 +42,7 @@ class MyMJXEnv():
         self,
         observation_size: int,
         action_size: int,
-        episode_length: int = 1000,
+        episode_length: int = None,
         qpos_init: jnp.ndarray = None,
         r_configs: dict = None,
         r_weights: dict = None,
@@ -50,7 +50,6 @@ class MyMJXEnv():
         self.observation_size = observation_size
         self.action_size = action_size
         self.episode_length = episode_length
-
 
         # load the franka model #TODO: currently only arm, may need add object later
         FRANKA_ROOT_PATH = epath.Path('mujoco_menagerie/franka_emika_panda') # relative path, resolves to where I call the script
@@ -153,12 +152,11 @@ class MyMJXEnv():
         self.dkp_max = jnp.array([100.0]*7, dtype=jnp.float32)
         self.dkd_max = jnp.array([20.0]*7, dtype=jnp.float32)
 
-        #TODO: env/train steps, is this reasonable?
-        #! based on my current setup, global_train_step is counted per step across
-        #! all envs. Then in total I have NUM_UPDATES*NUM_STEPS countings.
-        #! the number below is a 4/6 split of NUM_UPDATES*NUM_STEPS 
-        self.gain_schedule_start = jnp.float32(14640) 
-        self.gain_schedule_end = jnp.float32(24400)
+        #! Residual gain curriculum defined on normalized train progress [0, 1].
+        #! Example: 0.6 -> 1.0 means "start enabling residual gains at 60% training
+        #! progress and fully enable them by the end".
+        self.gain_progress_start = jnp.float32(0.6)
+        self.gain_progress_end = jnp.float32(1.0)
 
         # some quantities for reward computation 
         self._zhat_w_opp = jnp.array([0.0, 0.0, -1.0], dtype=jnp.float32) 
@@ -229,8 +227,33 @@ class MyMJXEnv():
         Replace this placeholder with your real MJX simulation step.
         """
 
-        #* number of updates of the NN
-        train_step = params['train_step'] if params is not None else 0
+        # Training context passed from PPO on each step.
+        train_step = (
+            jnp.asarray(params.get("train_step", 0), dtype=jnp.int32)
+            if params is not None
+            else jnp.array(0, dtype=jnp.int32)
+        )
+        train_progress = (
+            jnp.asarray(params.get("train_progress", 0.0), dtype=jnp.float32)
+            if params is not None
+            else jnp.array(0.0, dtype=jnp.float32)
+        )
+        gain_progress_start = (
+            jnp.asarray(
+                params.get("gain_schedule_split", self.gain_progress_start),
+                dtype=jnp.float32,
+            )
+            if params is not None
+            else self.gain_progress_start
+        )
+        gain_progress_end = (
+            jnp.asarray(
+                params.get("gain_schedule_end", self.gain_progress_end),
+                dtype=jnp.float32,
+            )
+            if params is not None
+            else self.gain_progress_end
+        )
         rng, rng_reset = jax.random.split(state.rng)
 
         action = jnp.asarray(action, dtype=jnp.float32)
@@ -242,7 +265,10 @@ class MyMJXEnv():
         action_in_v = self.v_low + 0.5*(self.v_high - self.v_low) * (action_v[:7] + 1.0)
 
         # residual gain with scheduling and clipping
-        schedule = self._ramp(train_step, self.gain_schedule_start, self.gain_schedule_end)
+        del train_step  # train_progress is now the schedule driver.
+        schedule = self._ramp(
+            train_progress, gain_progress_start, gain_progress_end
+        )
         kp = self.kp_base + schedule * (self.dkp_max * action_dkp)
         kd = self.kd_base + schedule * (self.dkd_max * action_dkd)
 
@@ -415,7 +441,11 @@ class MyMJXEnv():
 
 def make_mjx_env():
     """Factory used by training config."""
-    return MyMJXEnv(observation_size=14, action_size=21, episode_length=200, r_configs=r_configs1, r_weights=r_weights1)
+    return MyMJXEnv(observation_size=14, 
+                    action_size=21, 
+                    episode_length=200, 
+                    r_configs=r_configs1, 
+                    r_weights=r_weights1)
 
 
 # Example wiring with purejaxrl/purejaxrl/ppo_continuous_action.py:
