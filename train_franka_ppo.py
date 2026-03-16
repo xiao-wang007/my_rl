@@ -71,7 +71,7 @@ config_base = {
     
     #* Host debug callback every N PPO updates (1 = every update).
     #* Higher = fewer GPU→host sync stalls. 50 is a good balance.
-    "DEBUG_PRINT_INTERVAL_UPDATES": 50,
+    "DEBUG_PRINT_INTERVAL_UPDATES": 5,
     "COLLECT_METRICS": False,
     "WANDB_LOG": False,
     
