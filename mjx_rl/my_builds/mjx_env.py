@@ -56,7 +56,9 @@ class MyMJXEnv():
 
         self.mj_model = mujoco.MjModel.from_xml_path(
             (FRANKA_ROOT_PATH / 'panda_nohand.xml').as_posix())
-        self.mj_model.opt.solver = mujoco.mjtSolver.mjSOL_CG
+        #! Newton is faster than CG for small systems without heavy contacts.
+        #! CG is only better for large contact-rich scenes.
+        self.mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
         assert self.mj_model.nu == 7, (
             f"Expected 7 actuators (arm-only model), got nu={self.mj_model.nu}. "
             "Use a no-gripper Panda XML or update controller/action dimensions."
@@ -79,7 +81,10 @@ class MyMJXEnv():
         self._r_weights = r_weights 
 
         # mujoco sim dt
-        self._dt_sim = 0.004
+        #! 0.004 → action_repeat=5 was overkill for a free arm with no contacts.
+        #! 0.01 is stable for revolute-joint arm (PD ctrl natural freq ~10 rad/s,
+        #! Nyquist limit ~0.31s >> 0.01). Halves MJX compute vs 0.004.
+        self._dt_sim = 0.01
         self.mj_model.opt.timestep = self._dt_sim
 
         # policy dt
@@ -118,9 +123,11 @@ class MyMJXEnv():
         self.mj_model.actuator_ctrlrange[4:7, 0] = -12.0
         self.mj_model.actuator_ctrlrange[4:7, 1] = 12.0
 
-        #? not sure what these are doing, ignore for now
-        self.mj_model.opt.iterations = 6
-        self.mj_model.opt.ls_iterations = 6
+        #! Constraint solver iterations. For a free arm with no contacts,
+        #! the solver barely activates. 1 iteration is enough; reduce from 6
+        #! to save ~5× solver overhead per substep.
+        self.mj_model.opt.iterations = 1
+        self.mj_model.opt.ls_iterations = 4
 
         # u of shape (nu, 2)
         u_bounds = jnp.array(self.mj_model.actuator_ctrlrange, dtype=jnp.float32)

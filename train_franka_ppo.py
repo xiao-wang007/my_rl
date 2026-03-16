@@ -45,13 +45,13 @@ CHECKPOINT_META_FILE = CHECKPOINT_DIR / "train_franka_ppo.meta.json"
 config_base = {
     "LR": 3e-4,
     "NUM_ENVS": 256,           # 1080Ti has 11GB; 2048 OOMs
-    "NUM_STEPS": 20,
+    "NUM_STEPS": 64,           # was 20; longer rollouts amortize PPO overhead
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
     "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,
-    "NUM_MINIBATCHES": 4,     # minibatch = 256*20/4 = 1280
+    "NUM_MINIBATCHES": 8,     # minibatch = 256*64/8 = 2048
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
@@ -68,21 +68,24 @@ config_base = {
     "DEBUG": True,
     
     #* Host debug callback every N PPO updates (1 = every update).
-    "DEBUG_PRINT_INTERVAL_UPDATES": 10,
+    #* Higher = fewer GPU→host sync stalls. 50 is a good balance.
+    "DEBUG_PRINT_INTERVAL_UPDATES": 50,
     "COLLECT_METRICS": False,
     "WANDB_LOG": True,
     
     #* Host wandb callback every N PPO updates (1 = every update).
-    "WANDB_LOG_INTERVAL_UPDATES": 10,
+    #* Each callback is a jax.debug.callback → GPU stall + HTTP request.
+    "WANDB_LOG_INTERVAL_UPDATES": 50,
     "WANDB_PROJECT": "my_rl",
     "WANDB_RUN_NAME": "franka_ppo_v1",
     
     #* Lower unroll speeds up compile time (often at some runtime cost).
-    "GAE_SCAN_UNROLL": 4,
+    "GAE_SCAN_UNROLL": 8,
     
     #* Periodic checkpoint every N PPO updates (inside the scan, no recompile).
-    #* 0 = disabled. Callback is injected by _run_once before compilation.
-    "CHECKPOINT_INTERVAL_UPDATES": 200,
+    #* Each checkpoint is a full GPU→host→disk round trip. Keep infrequent.
+    #* 0 = disabled.
+    "CHECKPOINT_INTERVAL_UPDATES": 500,
     
     #* Print approximate per-update split: compute vs host callbacks.
     "PROFILE_CALLBACK_OVERHEAD": True,
