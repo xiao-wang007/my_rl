@@ -37,7 +37,7 @@ print("env smoke: OK")
 #! total training loops: TOTAL_TIMESTEPS // (NUM_ENVS * NUM_STEPS)
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
-TOTAL_TIMESTEPS = 20 * 400 * 500 # = 4_000_000, i.e. ~4M env transitions
+TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions; with 64 steps, the GAE scan unroll can be 8 for faster compile without bloating IR  
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -45,8 +45,8 @@ CHECKPOINT_META_FILE = CHECKPOINT_DIR / "train_franka_ppo.meta.json"
 
 config_base = {
     "LR": 3e-4,
-    "NUM_ENVS": 400,           # 1080Ti has 11GB; 2048 OOMs
-    "NUM_STEPS": 20,
+    "NUM_ENVS": 256,           # 1080Ti has 11GB; 2048 OOMs
+    "NUM_STEPS": 64,
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
