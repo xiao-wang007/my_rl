@@ -37,7 +37,8 @@ print("env smoke: OK")
 #! total training loops: TOTAL_TIMESTEPS // (NUM_ENVS * NUM_STEPS)
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
-TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions; with 64 steps, the GAE scan unroll can be 8 for faster compile without bloating IR  
+# TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions; with 64 steps, the GAE scan unroll can be 8 for faster compile without bloating IR  
+TOTAL_TIMESTEPS = 64 * 256 * 5
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
