@@ -172,6 +172,26 @@ class MyMJXEnv():
     def _ramp(self, x, x0, x1):
         return jnp.clip((x - x0) / (x1 - x0), 0.0, 1.0)
 
+    def _build_obs(self, data, x_ee_mid, v_ee_mid, x_ee_final, mid_done):
+        """Build the observation vector used by both reset and step.
+
+        Layout:
+        [qpos(7), qvel(7), dx_mid(3), dv_mid(3), dx_final(3), mid_done(1)] -> (24,)
+        """
+        x_ee = data.xpos[self.ee_body_id]
+        v_ee = data.cvel[self.ee_body_id, 3:]
+        return jnp.concatenate(
+            [
+                data.qpos,
+                data.qvel,
+                x_ee_mid - x_ee,
+                v_ee_mid - v_ee,
+                x_ee_final - x_ee,
+                mid_done.astype(jnp.float32)[None],
+            ],
+            axis=0,
+        ).astype(jnp.float32)
+
     def reset(self, key, params=None):
         """Reset one env.
 
@@ -200,19 +220,18 @@ class MyMJXEnv():
         #* forces), then  integrate forward in time.
         data = mjx.forward(self.mjx_model, data)
 
-        #? data.qpos and data.qvel are 1D, axis=0 is not necessary
-        obs = jnp.concatenate([data.qpos, data.qvel], axis=0).astype(jnp.float32)  
-
         key, key_vel = jax.random.split(key)
 
         x_ee_mid = jnp.array([0.4, 0.4, 0.05], dtype=jnp.float32)
         x_ee_final = jnp.array([0.4, 0.4, 0.25], dtype=jnp.float32)
+        mid_done = jnp.array(False, dtype=jnp.bool_)
 
         # TODO: this range should be informed by the energy equation with the target x y theta
         v_ee_mid = jax.random.uniform(key_vel, 
                                    (3,), 
                                    minval=jnp.array([-0.5, -0.5, 0.]), 
                                    maxval=jnp.array([ 0.5,  0.5, 0.])).astype(jnp.float32)
+        obs = self._build_obs(data, x_ee_mid, v_ee_mid, x_ee_final, mid_done)
 
         return MJXState(
             data=data,
@@ -221,7 +240,7 @@ class MyMJXEnv():
             done=jnp.array(False),
             t=jnp.array(0, dtype=jnp.int32),
             action_v_prev=jnp.zeros((7,), dtype=jnp.float32),
-            mid_done=jnp.array(False, dtype=jnp.bool_),
+            mid_done=mid_done,
             x_ee_final=x_ee_final,
             x_ee_mid=x_ee_mid,
             v_ee_mid=v_ee_mid,
@@ -298,16 +317,13 @@ class MyMJXEnv():
 
         #TODO: expanding gradually for curriculum learning.
         #* currently fixing the observation for x_mid, and x_final
-        x_ee_next = data_next.xpos[self.ee_body_id]
-        v_ee_next = data_next.qvel[self.ee_body_id]
-        obs_next = jnp.concatenate([data_next.qpos, 
-                                    data_next.qvel,
-                                    state.x_ee_mid - x_ee_next, # dx_mid
-                                    state.v_ee_mid - v_ee_next, # dv_mid
-                                    state.x_ee_final - x_ee_next, # dx_final
-                                    state.mid_done.astype(jnp.float32) # converting to scalar
-                                    ], 
-                                    axis=0).astype(jnp.float32)
+        obs_next = self._build_obs(
+            data_next,
+            state.x_ee_mid,
+            state.v_ee_mid,
+            state.x_ee_final,
+            state.mid_done,
+        )
         
         
         # increment the step count  
@@ -448,7 +464,7 @@ class MyMJXEnv():
 
 def make_mjx_env():
     """Factory used by training config."""
-    return MyMJXEnv(observation_size=14, 
+    return MyMJXEnv(observation_size=24, 
                     action_size=21, 
                     episode_length=200, 
                     r_configs=r_configs1, 
