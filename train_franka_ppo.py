@@ -46,7 +46,7 @@ CHECKPOINT_META_FILE = CHECKPOINT_DIR / "train_franka_ppo.meta.json"
 
 config_base = {
     "LR": 3e-4,
-    "NUM_ENVS": 128,           # 1080Ti has 11GB; 2048 OOMs
+    "NUM_ENVS": 256,           # 1080Ti has 11GB; 2048 OOMs
     "NUM_STEPS": 32,
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
@@ -78,7 +78,7 @@ config_base = {
     #* Each callback is a jax.debug.callback → GPU stall + HTTP request.
     "WANDB_LOG_INTERVAL_UPDATES": 1,
     "WANDB_PROJECT": "my_rl",
-    "WANDB_RUN_NAME": "franka_ppo_v2",
+    "WANDB_RUN_NAME": "franka_ppo_v2_256x32",
     
     #* Lower unroll speeds up compile time (often at some runtime cost).
     "GAE_SCAN_UNROLL": 8,
@@ -86,10 +86,10 @@ config_base = {
     #* Periodic checkpoint every N PPO updates (inside the scan, no recompile).
     #* Each checkpoint is a full GPU→host→disk round trip. Keep infrequent.
     #* 0 = disabled.
-    "CHECKPOINT_INTERVAL_UPDATES": 0,
+    "CHECKPOINT_INTERVAL_UPDATES": 100,
     
     #* Print approximate per-update split: compute vs host callbacks.
-    "PROFILE_CALLBACK_OVERHEAD": True,
+    "PROFILE_CALLBACK_OVERHEAD": False,
 
     #* PD gain as actions, scheduling
     "GAIN_SCHEDULE_SPLIT": 0.5,
