@@ -346,7 +346,7 @@ class MyMJXEnv():
         #! _terminal() with rewards and done=True won't be leaking through the new episode
 
         #? actions are velocities, not gains, should I pass tau for action penalty?
-        next_reward, mid_done = self._compute_rewards_binary(state, action[:7], next_state)
+        next_reward, mid_done = self._compute_rewards_binary(state, action[:7], next_state, train_progress)
         next_state = next_state.replace(reward=next_reward.astype(jnp.float32),
                                         mid_done=mid_done) 
 
@@ -374,8 +374,22 @@ class MyMJXEnv():
         """ Smooth blending of two phases """
         pass
 
-    def _compute_rewards_binary(self, state, action, next_state):
+    def _compute_rewards_binary(self, state, action, next_state, train_progress=None):
         """ should always use next_state for reward """
+        if train_progress is None:
+            train_progress = jnp.array(1.0, dtype=jnp.float32)
+
+        # Curriculum: anneal mid-target thresholds from easy → tight over training.
+        # At progress=0: use eps_*_start (easy). At progress=1: use eps_*_end (tight).
+        eps_pos = (
+            self._r_configs["eps_pos_start"]
+            + train_progress * (self._r_configs["eps_pos_end"] - self._r_configs["eps_pos_start"])
+        )
+        eps_vel = (
+            self._r_configs["eps_vel_start"]
+            + train_progress * (self._r_configs["eps_vel_end"] - self._r_configs["eps_vel_start"])
+        )
+
         x_ee_mid = next_state.x_ee_mid
         v_ee_mid = next_state.v_ee_mid
         x_ee_final = next_state.x_ee_final
@@ -443,19 +457,22 @@ class MyMJXEnv():
         r_action_rate = -self._r_weights["w_action_rate"] * jnp.sum((v_cmd_now - v_cmd_prev) ** 2)
 
         mid_achieved_now = (
-            (pos_err_mid < self._r_configs["eps_pos"]) &
-            (vel_err_mid < self._r_configs["eps_vel"])
+            (pos_err_mid < eps_pos) &
+            (vel_err_mid < eps_vel)
         )
 
         # Persist success once achieved
-        # state.mid_done should be a bool stored in your env state
         mid_done = state.mid_done | mid_achieved_now
 
         r_retract = self._r_weights["w_pos_final"] * jnp.exp(
             -self._r_configs["alpha4"] * retract_err**2
         )
 
-        reward = jnp.where(mid_done, r_retract, r_mid)
+        # Soft blend: as EE approaches mid target, gradually mix in retract reward.
+        # This avoids the hard binary switch that creates a reward cliff.
+        # blend_factor goes 0→1 as pos_err_mid shrinks (uses same kernel as r_pos_mid).
+        blend_factor = r_pos_mid  # already = exp(-alpha1 * pos_err_mid²)
+        reward = (1.0 - blend_factor) * r_mid + blend_factor * (r_mid + r_retract)
         reward = reward + r_action_rate 
 
         # Return both reward and updated phase flag
