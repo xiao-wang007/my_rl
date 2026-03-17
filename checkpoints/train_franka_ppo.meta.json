@@ -1,6 +1,0 @@
-{
-  "global_train_step": 6400,
-  "env_transition_step": 1638400,
-  "target_total_timesteps": 1638400,
-  "saved_at_unix": 1773766793.239455
-}

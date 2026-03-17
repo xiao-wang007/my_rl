@@ -17,6 +17,7 @@ r_configs1 = {
     "alpha_tilt": np.float32(1.0),
     "beta_tilt": np.float32(2.0),
     "eps_vmag": np.float32(0.05), # m/s
+    "eps_vel": np.float32(0.05),  # normalizing epsilon for velocity unit vectors
 }
 
 r_weights1 = {
