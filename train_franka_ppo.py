@@ -38,7 +38,7 @@ print("env smoke: OK")
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
 # TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions; with 64 steps, the GAE scan unroll can be 8 for faster compile without bloating IR  
-TOTAL_TIMESTEPS = 64 * 256 * 5
+TOTAL_TIMESTEPS = 32 * 128* 5
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -46,14 +46,14 @@ CHECKPOINT_META_FILE = CHECKPOINT_DIR / "train_franka_ppo.meta.json"
 
 config_base = {
     "LR": 3e-4,
-    "NUM_ENVS": 256,           # 1080Ti has 11GB; 2048 OOMs
-    "NUM_STEPS": 64,
+    "NUM_ENVS": 128,           # 1080Ti has 11GB; 2048 OOMs
+    "NUM_STEPS": 32,
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
     "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,
-    "NUM_MINIBATCHES": 8,     # minibatch = 256*64/8 = 2048
+    "NUM_MINIBATCHES": 4,     # minibatch = 128*32/4 = 1024 samples, 4 updates per rollouts
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
@@ -71,7 +71,7 @@ config_base = {
     
     #* Host debug callback every N PPO updates (1 = every update).
     #* Higher = fewer GPU→host sync stalls. 50 is a good balance.
-    "DEBUG_PRINT_INTERVAL_UPDATES": 5,
+    "DEBUG_PRINT_INTERVAL_UPDATES": 1,
     "COLLECT_METRICS": False,
     "WANDB_LOG": False,
     
