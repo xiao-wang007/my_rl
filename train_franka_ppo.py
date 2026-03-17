@@ -43,6 +43,7 @@ TOTAL_TIMESTEPS = 32 * 128* 5
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
 CHECKPOINT_META_FILE = CHECKPOINT_DIR / "train_franka_ppo.meta.json"
+WANDB_RUN_ID: str | None = None
 
 config_base = {
     "LR": 3e-4,
@@ -103,12 +104,33 @@ config_base = {
 #! Unroll 16 or 20 (full unroll) would work at this horizon but bloats compile IR for no meaningful runtime gain
 
 
-def _load_done_env_steps() -> int:
+def _load_checkpoint_meta() -> dict:
     if not CHECKPOINT_META_FILE.exists():
-        return 0
+        return {}
     with CHECKPOINT_META_FILE.open("r", encoding="utf-8") as f:
-        meta = json.load(f)
+        return json.load(f)
+
+
+def _load_done_env_steps() -> int:
+    meta = _load_checkpoint_meta()
     return int(meta.get("env_transition_step", 0))
+
+
+def _load_wandb_run_id() -> str | None:
+    meta = _load_checkpoint_meta()
+    run_id = meta.get("wandb_run_id")
+    if run_id is None:
+        return None
+    run_id = str(run_id).strip()
+    return run_id or None
+
+
+def _persist_wandb_run_id(run_id: str) -> None:
+    CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+    meta = _load_checkpoint_meta()
+    meta["wandb_run_id"] = str(run_id)
+    with CHECKPOINT_META_FILE.open("w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
 
 
 def _save_checkpoint_from_out(out, target_total_timesteps: int) -> int:
@@ -171,6 +193,7 @@ def _save_checkpoint_core(
     include_in_profile: bool = False,
 ) -> int:
     """Shared logic for saving a checkpoint."""
+    global WANDB_RUN_ID
     t0 = time.perf_counter()
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -187,6 +210,8 @@ def _save_checkpoint_core(
         "target_total_timesteps": int(target_total_timesteps),
         "saved_at_unix": time.time(),
     }
+    if WANDB_RUN_ID is not None:
+        meta["wandb_run_id"] = WANDB_RUN_ID
     with CHECKPOINT_META_FILE.open("w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
     print(f"  periodic checkpoint: {env_transition_step}/{int(target_total_timesteps)} env transitions")
@@ -259,6 +284,7 @@ def _run_once(remaining_timesteps: int, resume: bool):
 if config_base.get("WANDB_LOG", False):
     import wandb
 
+    resume_wandb_run_id = _load_wandb_run_id()
     wandb_config = {}
     for key, value in config_base.items():
         if key == "MJX_ENV":
@@ -271,10 +297,14 @@ if config_base.get("WANDB_LOG", False):
         "config": wandb_config,
         "resume": "allow",
     }
+    if resume_wandb_run_id:
+        wandb_init_kwargs["id"] = resume_wandb_run_id
     run_name = config_base.get("WANDB_RUN_NAME")
     if run_name:
         wandb_init_kwargs["name"] = run_name
-    wandb.init(**wandb_init_kwargs)
+    run = wandb.init(**wandb_init_kwargs)
+    WANDB_RUN_ID = str(run.id)
+    _persist_wandb_run_id(WANDB_RUN_ID)
 
 done_env_steps = _load_done_env_steps()
 if done_env_steps >= TOTAL_TIMESTEPS:
