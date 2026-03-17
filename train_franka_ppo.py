@@ -72,14 +72,14 @@ config_base = {
     #* Host debug callback every N PPO updates (1 = every update).
     #* Higher = fewer GPU→host sync stalls. 50 is a good balance.
     "DEBUG_PRINT_INTERVAL_UPDATES": 1,
-    "COLLECT_METRICS": False,
-    "WANDB_LOG": False,
+    "COLLECT_METRICS": True,
+    "WANDB_LOG": True,
     
     #* Host wandb callback every N PPO updates (1 = every update).
     #* Each callback is a jax.debug.callback → GPU stall + HTTP request.
-    "WANDB_LOG_INTERVAL_UPDATES": 50,
+    "WANDB_LOG_INTERVAL_UPDATES": 1,
     "WANDB_PROJECT": "my_rl",
-    "WANDB_RUN_NAME": "franka_ppo_v1",
+    "WANDB_RUN_NAME": "franka_ppo_v2",
     
     #* Lower unroll speeds up compile time (often at some runtime cost).
     "GAE_SCAN_UNROLL": 8,

@@ -2,5 +2,5 @@
   "global_train_step": 160,
   "env_transition_step": 20480,
   "target_total_timesteps": 20480,
-  "saved_at_unix": 1773736019.4144447
+  "saved_at_unix": 1773742256.3825045
 }
