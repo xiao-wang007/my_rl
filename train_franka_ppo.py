@@ -38,7 +38,7 @@ print("env smoke: OK")
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
 # TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions; with 64 steps, the GAE scan unroll can be 8 for faster compile without bloating IR  
-TOTAL_TIMESTEPS = 32 * 128* 5
+TOTAL_TIMESTEPS = 32 * 256 * 200
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -78,7 +78,7 @@ config_base = {
     #* Each callback is a jax.debug.callback → GPU stall + HTTP request.
     "WANDB_LOG_INTERVAL_UPDATES": 1,
     "WANDB_PROJECT": "my_rl",
-    "WANDB_RUN_NAME": "franka_ppo_v2_256x32",
+    "WANDB_RUN_NAME": "franka_ppo_v2_256x32_run",
     
     #* Lower unroll speeds up compile time (often at some runtime cost).
     "GAE_SCAN_UNROLL": 8,
