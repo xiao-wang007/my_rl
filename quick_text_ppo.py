@@ -46,7 +46,6 @@ config = {
     "ANNEAL_LR": False,
     "NORMALIZE_ENV": False,
     "DEBUG": False,
-    "COLLECT_METRICS": False,
     "WANDB_LOG": False,
     "WANDB_PROJECT": "my_rl",
     "WANDB_RUN_NAME": "quick_text_ppo",
