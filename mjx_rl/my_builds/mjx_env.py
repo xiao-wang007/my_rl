@@ -136,7 +136,9 @@ class MyMJXEnv():
         self.v_low = -self.v_high
 
         # get joint position limits
-        self.limit_margin = 1e-2
+        #! 1e-2 was too tight — PD controller overshoots by more than 0.01 rad/s
+        #! in a single env step. 0.1 gives the policy room to learn to back off.
+        self.limit_margin = 0.1
         self.qpos_low = jnp.array(self.mj_model.jnt_range[:, 0])
         self.qpos_high = jnp.array(self.mj_model.jnt_range[:, 1])
 
@@ -279,7 +281,14 @@ class MyMJXEnv():
         action_dkd = action[14:21]
         
         # converting action to jax array
-        action_in_v = self.v_low + 0.5*(self.v_high - self.v_low) * (action_v[:7] + 1.0)
+        #! Cap commanded velocity to 70% of joint limits.
+        #! The policy outputs [-1, 1] which maps to full v_low..v_high.
+        #! At extremes, the PD controller generates huge torques that overshoot
+        #! velocity limits within one env step, causing instant termination.
+        v_cmd_scale = 0.7
+        v_low_cmd = v_cmd_scale * self.v_low
+        v_high_cmd = v_cmd_scale * self.v_high
+        action_in_v = v_low_cmd + 0.5*(v_high_cmd - v_low_cmd) * (action_v[:7] + 1.0)
 
         # residual gain with scheduling and clipping
         schedule = self._ramp(
@@ -292,7 +301,7 @@ class MyMJXEnv():
         kd = jnp.clip(kd, self.kd_base, self.kd_base + self.dkd_max)
 
         #! I am using velocity as action for my case, convert to torque here
-        action_v_prev = self.v_low + 0.5*(self.v_high - self.v_low) * (state.action_v_prev + 1.0) #* convert to physical units
+        action_v_prev = v_low_cmd + 0.5*(v_high_cmd - v_low_cmd) * (state.action_v_prev + 1.0) #* convert to physical units
         q_ref = state.obs[:7] + action_v_prev * self._dt_env #TODO: try using action_v than action_v_prev 
         tau = kp * (q_ref - state.obs[:7]) + kd * (action_in_v - state.obs[7:14]) + state.data.qfrc_bias
         tau = jnp.clip(tau, self.u_low, self.u_high)
@@ -459,6 +468,14 @@ class MyMJXEnv():
         v_cmd_prev = self.v_low + 0.5 * (self.v_high - self.v_low) * (state.action_v_prev + 1.0)
         r_action_rate = -self._r_weights["w_action_rate"] * jnp.sum((v_cmd_now - v_cmd_prev) ** 2)
 
+        # Penalty for approaching joint velocity limits.
+        # Measures how close each joint is to its velocity bound (0 = center, 1 = at limit).
+        qvel = next_state.obs[7:14]
+        vel_ratio = jnp.abs(qvel) / self.v_high  # 0..1, 1 = at limit
+        # Quadratic penalty that activates above 80% of limit
+        vel_excess = jnp.clip(vel_ratio - 0.8, 0.0, None)
+        r_vel_limit = -self._r_weights["w_vel_limit"] * jnp.sum(vel_excess ** 2)
+
         mid_achieved_now = (
             (pos_err_mid < eps_pos) &
             (vel_err_mid < eps_vel)
@@ -476,7 +493,7 @@ class MyMJXEnv():
         # blend_factor goes 0→1 as pos_err_mid shrinks (uses same kernel as r_pos_mid).
         blend_factor = r_pos_mid  # already = exp(-alpha1 * pos_err_mid²)
         reward = (1.0 - blend_factor) * r_mid + blend_factor * (r_mid + r_retract)
-        reward = reward + r_action_rate 
+        reward = reward + r_action_rate + r_vel_limit 
 
         # Return both reward and updated phase flag
         return reward, mid_done

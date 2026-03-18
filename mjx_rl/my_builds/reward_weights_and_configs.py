@@ -26,5 +26,6 @@ r_weights1 = {
    "w_pos_final": np.float32(1.0),
    "w_vel_progress": np.float32(0.05),
    "w_action_rate": np.float32(0.001),
-   "w_tilt": np.float32(1.0)
+   "w_tilt": np.float32(1.0),
+   "w_vel_limit": np.float32(0.5),   # penalty for approaching joint velocity limits
 }

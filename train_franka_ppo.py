@@ -48,7 +48,7 @@ WANDB_RUN_ID: str | None = None
 config_base = {
     "LR": 3e-4,
     "NUM_ENVS": 128,           # 1080Ti has 11GB; 2048 OOMs
-    "NUM_STEPS": 64,
+    "NUM_STEPS": 64,           # ep_len ~13, 32 steps is plenty for GAE
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
