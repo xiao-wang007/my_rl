@@ -53,8 +53,8 @@ config_base = {
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
     "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
-    "UPDATE_EPOCHS": 4,
-    "NUM_MINIBATCHES": 8,     # minibatch = 128*64/8 = 1024 samples, 4 updates per rollouts
+    "UPDATE_EPOCHS": 4,   #* 4 gradient steps per minibatch, 32 total gradient steps per update
+    "NUM_MINIBATCHES": 8,     #* minibatch = 128*64/8 = 1024 samples
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
