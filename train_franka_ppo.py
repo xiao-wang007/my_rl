@@ -38,7 +38,7 @@ print("env smoke: OK")
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
 # TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions; with 64 steps, the GAE scan unroll can be 8 for faster compile without bloating IR  
-TOTAL_TIMESTEPS = 32 * 256 * 200
+TOTAL_TIMESTEPS = 64 * 128 * 1000 # = 8_192_000, 
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -47,18 +47,18 @@ WANDB_RUN_ID: str | None = None
 
 config_base = {
     "LR": 3e-4,
-    "NUM_ENVS": 256,           # 1080Ti has 11GB; 2048 OOMs
-    "NUM_STEPS": 32,
+    "NUM_ENVS": 128,           # 1080Ti has 11GB; 2048 OOMs
+    "NUM_STEPS": 64,
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
     "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,
-    "NUM_MINIBATCHES": 4,     # minibatch = 128*32/4 = 1024 samples, 4 updates per rollouts
+    "NUM_MINIBATCHES": 8,     # minibatch = 128*64/8 = 1024 samples, 4 updates per rollouts
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
-    "ENT_COEF": 0.0,
+    "ENT_COEF": 0.1,
     "VF_COEF": 0.5,
     "MAX_GRAD_NORM": 0.5,
     "ACTIVATION": "tanh",
@@ -79,7 +79,7 @@ config_base = {
     #* Each callback is a jax.debug.callback → GPU stall + HTTP request.
     "WANDB_LOG_INTERVAL_UPDATES": 1,
     "WANDB_PROJECT": "my_rl",
-    "WANDB_RUN_NAME": "franka_ppo_v2_256x32_run",
+    "WANDB_RUN_NAME": "franka_ppo_v2_128x64x1000",
     
     #* Lower unroll speeds up compile time (often at some runtime cost).
     "GAE_SCAN_UNROLL": 8,
