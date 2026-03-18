@@ -29,11 +29,7 @@ class MJXState:
     x_ee_final: jnp.ndarray #! end-effector target position at the end of episode
     mid_done: jnp.ndarray #! flag indicating if mid target is achieved
     rng: jnp.ndarray
-
-    # Add task-specific physics fields here, e.g.:
-    # qpos: jnp.ndarray
-    # qvel: jnp.ndarray
-
+    done_info: jnp.ndarray #! shape (6,) for each done condition
 
 class MyMJXEnv():
     """Minimal single-env API expected by MJXGymnaxWrapper."""
@@ -245,6 +241,7 @@ class MyMJXEnv():
             x_ee_mid=x_ee_mid,
             v_ee_mid=v_ee_mid,
             rng=key,
+            done_info=jnp.zeros((6,), dtype=jnp.float32)
         )
 
     def step(self, state: MJXState, action: jnp.ndarray, params=None):
@@ -253,12 +250,6 @@ class MyMJXEnv():
         Replace this placeholder with your real MJX simulation step.
         """
 
-        # Training context passed from PPO on each step.
-        train_step = (
-            jnp.asarray(params.get("train_step", 0), dtype=jnp.int32)
-            if params is not None
-            else jnp.array(0, dtype=jnp.int32)
-        )
         train_progress = (
             jnp.asarray(params.get("train_progress", 0.0), dtype=jnp.float32)
             if params is not None
@@ -291,7 +282,6 @@ class MyMJXEnv():
         action_in_v = self.v_low + 0.5*(self.v_high - self.v_low) * (action_v[:7] + 1.0)
 
         # residual gain with scheduling and clipping
-        del train_step  # train_progress is now the schedule driver.
         schedule = self._ramp(
             train_progress, gain_progress_start, gain_progress_end
         )
@@ -304,7 +294,7 @@ class MyMJXEnv():
         #! I am using velocity as action for my case, convert to torque here
         action_v_prev = self.v_low + 0.5*(self.v_high - self.v_low) * (state.action_v_prev + 1.0) #* convert to physical units
         q_ref = state.obs[:7] + action_v_prev * self._dt_env #TODO: try using action_v than action_v_prev 
-        tau = kp * (q_ref - state.obs[:7]) + kd * (action_in_v - state.obs[7:14])
+        tau = kp * (q_ref - state.obs[:7]) + kd * (action_in_v - state.obs[7:14]) + state.data.qfrc_bias
         tau = jnp.clip(tau, self.u_low, self.u_high)
 
         #! need to repeat the action in a JAX-compatible way
@@ -312,8 +302,9 @@ class MyMJXEnv():
             data = data.replace(ctrl=tau)
             data = mjx.step(self.mjx_model, data)
             return data 
+        
+        #TODO: need to randomize self.action_repeat for Sim-To-Real transfer
         data_next = jax.lax.fori_loop(0, self.action_repeat, action_repeater, state.data)
-
 
         #TODO: expanding gradually for curriculum learning.
         #* currently fixing the observation for x_mid, and x_final
@@ -324,7 +315,6 @@ class MyMJXEnv():
             state.x_ee_final,
             state.mid_done,
         )
-        
         
         # increment the step count  
         t = state.t + 1
@@ -342,6 +332,7 @@ class MyMJXEnv():
             x_ee_final=state.x_ee_final,
             mid_done=state.mid_done,
             rng=rng,
+            done_info=jnp.zeros((6,), dtype=jnp.float32)
         ) #! damn! I forgot here the state got reinitialized therefore the env_state from 
         #! _terminal() with rewards and done=True won't be leaking through the new episode
 
@@ -351,19 +342,31 @@ class MyMJXEnv():
                                         mid_done=mid_done) 
 
         # compute the termination 
-        done = t >= self.episode_length
-        done = done | (~jnp.all(jnp.isfinite(next_state.obs)))  # Terminate if any obs is non-finite
-        done = done | jnp.any(next_state.obs[:7] < self.qpos_low + self.limit_margin) 
-        done = done | jnp.any(next_state.obs[:7] > self.qpos_high - self.limit_margin)
-        done = done | jnp.any(next_state.obs[7:14] < self.v_low + self.limit_margin)
-        done = done | jnp.any(next_state.obs[7:14] > self.v_high - self.limit_margin)
+        done_time = t >= self.episode_length
+        done_noninfinite =  ~jnp.all(jnp.isfinite(next_state.obs))  # Terminate if any obs is non-finite
+        done_qpos_low = jnp.any(next_state.obs[:7] < self.qpos_low + self.limit_margin) 
+        done_qpos_high = jnp.any(next_state.obs[:7] > self.qpos_high - self.limit_margin)
+        done_qvel_low = jnp.any(next_state.obs[7:14] < self.v_low + self.limit_margin)
+        done_qvel_high = jnp.any(next_state.obs[7:14] > self.v_high - self.limit_margin)
+
+        done = done_time | done_noninfinite | done_qpos_low | done_qpos_high | done_qvel_low | done_qvel_high
+        next_state = next_state.replace(done=done)
+
+        done_info = jnp.array([done_time, 
+                               done_noninfinite, 
+                               done_qpos_low, 
+                               done_qpos_high, 
+                               done_qvel_low, 
+                               done_qvel_high], dtype=jnp.float32)
+        next_state = next_state.replace(done_info=done_info)
 
         # Optional auto-reset behavior at terminal.
         def _terminal(_):
             # compute the rewards
             reset_state = self.reset(rng_reset)
             return reset_state.replace(reward=next_reward.astype(jnp.float32),
-                                       done=jnp.array(True)) 
+                                       done=jnp.array(True),
+                                       done_info=done_info) 
 
         def _non_terminal(_):
             return next_state

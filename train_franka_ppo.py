@@ -54,7 +54,7 @@ config_base = {
     #* Keep a stable total-timestep target for progress scheduling across resumes.
     "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,   #* 4 gradient steps per minibatch, 32 total gradient steps per update
-    "NUM_MINIBATCHES": 8,     #* minibatch = 128*64/8 = 1024 samples
+    "NUM_MINIBATCHES": 4,     #* minibatch = 128*64/8 = 1024 samples
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
@@ -214,7 +214,7 @@ def _save_checkpoint_core(
         meta["wandb_run_id"] = WANDB_RUN_ID
     with CHECKPOINT_META_FILE.open("w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
-    print(f"  periodic checkpoint: {env_transition_step}/{int(target_total_timesteps)} env transitions")
+    # print(f"  periodic checkpoint: {env_transition_step}/{int(target_total_timesteps)} env transitions")
     if include_in_profile and perf_stats is not None:
         perf_stats["checkpoint_calls"] = int(perf_stats.get("checkpoint_calls", 0)) + 1
         perf_stats["checkpoint_host_sec"] = float(
