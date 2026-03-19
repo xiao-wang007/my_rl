@@ -64,3 +64,65 @@ e
 r_approach = (‖d_prev‖ - ‖d_now‖) / dt is a progress reward — it tells the agent "did you get closer this step?" This gives a clear, linear signal at any distance. Moving 1cm closer at 0.5m gives the same reward as moving 1cm closer at 0.1m.
 
 The key difference: r_pos_mid has a vanishing gradient far from the target (exponential decay), while r_approach has a constant gradient everywhere. That's exactly why training plateaus — the agent never learns to approach because r_pos_mid looks the same whether it's 0.3m or 0.5m away.
+-----------------------------------------------------------------------------------------------------------
+I should be able to change the coefficients for r_pos_mid to make it progressive than a new reward you suggested right?
+
+You can lower α₁ to widen the Gaussian, but you can't make it truly progressive — it's a fundamental shape limitation:
+
+Lowering α₁ (e.g., 10 → 1):
+
+At 0.5m: 
+e
+−
+1
+⋅
+0.25
+=
+0.78
+e 
+−1⋅0.25
+ =0.78, at 0.3m: 
+e
+−
+1
+⋅
+0.09
+=
+0.91
+e 
+−1⋅0.09
+ =0.91 → difference = 0.13
+Better than α₁=10 (where the difference was ~0.01), but still nonlinear and compressed far away
+Lowering α₁ further (e.g., 0.5):
+
+At 0.5m: 0.88, at 0.3m: 0.96 → difference = 0.08 — you've made it flatter, not more progressive
+This is the core tradeoff with exp(-α · d²):
+
+Large α: sharp near target, dead far away
+Small α: alive far away, but can't distinguish close from closer
+The Gaussian kernel is always steepest near d=0 and flattest far away — no α value changes that. You'd need a different kernel entirely, like:
+
+A linear kernel would give uniform gradient everywhere, which is essentially what r_approach does (but as a delta/progress signal instead of absolute distance).
+
+So yes, you could replace the Gaussian with a linear kernel on r_pos_mid instead of adding r_approach — that's a valid alternative. The r_approach approach is more standard in RL literature because it separates "where am I" (potential) from "am I improving" (shaping), but a linear r_pos_mid would also work for getting signal far from the target.
+-------------------------------------------------------------------------------------------------------------
+so which one is better?
+
+r_approach (separate progress reward) is better. Here's why:
+
+r_pos_mid is used as a gate for other rewards in your code:
+
+r_vel_gated = r_pos_mid * r_vel_mid
+r_tilt_gated = r_pos_mid * r_tilt
+blend_factor = r_pos_mid
+Making r_pos_mid linear means the velocity/tilt gates open at 0.375 when you're 0.5m away — the agent gets rewarded for matching velocity/tilt when it's nowhere near the target. The Gaussian gate correctly suppresses those until the agent is close.
+
+You want both signals:
+
+Far from target: dense approach signal to guide exploration → r_approach
+Near target: sharp precision signal to fine-tune position → Gaussian r_pos_mid
+Keeping them separate gives you both. Replacing the Gaussian with linear sacrifices precision near the target.
+
+r_approach is potential-based shaping (Ng et al. 1999) — it's theoretically guaranteed not to change the optimal policy, just speed up learning. Changing the kernel shape of r_pos_mid changes what the optimal policy actually optimizes for.
+
+TL;DR: Keep the Gaussian r_pos_mid for precision + gating, add r_approach for dense far-field signal. They're complementary, not redundant.
