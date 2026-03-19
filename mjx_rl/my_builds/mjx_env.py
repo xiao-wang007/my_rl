@@ -134,6 +134,7 @@ class MyMJXEnv():
         # v bounds for joints, mujoco does not have this natively
         self.v_high = jnp.array([2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61], dtype=jnp.float32)
         self.v_low = -self.v_high
+        self.vel_guard_start_ratio = jnp.float32(0.75)
 
         # get joint position limits
         #! 1e-2 was too tight — PD controller overshoots by more than 0.01 rad/s
@@ -154,14 +155,16 @@ class MyMJXEnv():
         # gain bounds 
         self.kp_base = jnp.array([100.0]*7, dtype=jnp.float32)
         self.kd_base = 2.0 * jnp.sqrt(self.kp_base)
-        self.dkp_max = jnp.array([100.0]*7, dtype=jnp.float32)
-        self.dkd_max = jnp.array([20.0]*7, dtype=jnp.float32)
+        #! Keep residual gain authority small (~20% of base) to prevent
+        #! destabilizing the PD controller when the schedule activates.
+        self.dkp_max = jnp.array([20.0]*7, dtype=jnp.float32)
+        self.dkd_max = jnp.array([4.0]*7, dtype=jnp.float32)
 
         #! Residual gain curriculum defined on normalized train progress [0, 1].
-        #! Example: 0.6 -> 1.0 means "start enabling residual gains at 60% training
-        #! progress and fully enable them by the end".
-        self.gain_progress_start = jnp.float32(0.6)
-        self.gain_progress_end = jnp.float32(1.0)
+        #! Start early (0.3) so the policy has 70% of training to adapt to
+        #! variable gains, and the ramp is gentle enough to avoid reward cliffs.
+        self.gain_progress_start = jnp.float32(0.3)
+        self.gain_progress_end = jnp.float32(0.8)
 
         # some quantities for reward computation 
         self._zhat_w_opp = jnp.array([0.0, 0.0, -1.0], dtype=jnp.float32) 
@@ -169,6 +172,20 @@ class MyMJXEnv():
 
     def _ramp(self, x, x0, x1):
         return jnp.clip((x - x0) / (x1 - x0), 0.0, 1.0)
+
+    def _apply_velocity_guard(self, tau, qvel):
+        """Suppress only torque that would drive joints further into velocity limits."""
+        guard_start = self.vel_guard_start_ratio * self.v_high
+        guard_limit = jnp.maximum(self.v_high - self.limit_margin, guard_start + 1e-3)
+        guard = (jnp.abs(qvel) - guard_start) / (guard_limit - guard_start)
+        guard = jnp.clip(guard, 0.0, 1.0)
+        guard = guard * guard * (3.0 - 2.0 * guard)
+
+        qvel_sign = jnp.sign(qvel)
+        tau_push_mag = jnp.maximum(tau * qvel_sign, 0.0)
+        tau_push = tau_push_mag * qvel_sign
+        tau_brake = tau - tau_push
+        return tau_brake + (1.0 - guard) * tau_push
 
     def _build_obs(self, data, x_ee_mid, v_ee_mid, x_ee_final, mid_done):
         """Build the observation vector used by both reset and step.
@@ -306,17 +323,10 @@ class MyMJXEnv():
         tau = kp * (q_ref - state.obs[:7]) + kd * (action_in_v - state.obs[7:14]) + state.data.qfrc_bias
         tau = jnp.clip(tau, self.u_low, self.u_high)
 
-        #! Velocity-aware torque damping: as a joint approaches its velocity
-        #! limit, smoothly reduce torque that would push it further.
-        #! This prevents the PD controller from overshooting velocity bounds.
+        # Reduce only the torque component that accelerates a joint further
+        # toward its velocity bound; keep braking torque available.
         qvel_now = state.obs[7:14]
-        vel_ratio_signed_high = (qvel_now - 0.8 * self.v_high) / (0.2 * self.v_high)  # 0→1 over top 20%
-        vel_ratio_signed_low = (0.8 * self.v_low - qvel_now) / (-0.2 * self.v_low)     # 0→1 over bottom 20%
-        damp_high = jnp.clip(vel_ratio_signed_high, 0.0, 1.0)  # only active near +limit
-        damp_low = jnp.clip(vel_ratio_signed_low, 0.0, 1.0)    # only active near -limit
-        # Zero out the portion of torque that accelerates toward the limit
-        tau = tau * (1.0 - damp_high * (tau > 0).astype(jnp.float32))
-        tau = tau * (1.0 - damp_low * (tau < 0).astype(jnp.float32))
+        tau = self._apply_velocity_guard(tau, qvel_now)
 
         #! need to repeat the action in a JAX-compatible way
         def action_repeater(_, data):
