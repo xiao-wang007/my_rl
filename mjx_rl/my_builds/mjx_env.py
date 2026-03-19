@@ -306,6 +306,18 @@ class MyMJXEnv():
         tau = kp * (q_ref - state.obs[:7]) + kd * (action_in_v - state.obs[7:14]) + state.data.qfrc_bias
         tau = jnp.clip(tau, self.u_low, self.u_high)
 
+        #! Velocity-aware torque damping: as a joint approaches its velocity
+        #! limit, smoothly reduce torque that would push it further.
+        #! This prevents the PD controller from overshooting velocity bounds.
+        qvel_now = state.obs[7:14]
+        vel_ratio_signed_high = (qvel_now - 0.8 * self.v_high) / (0.2 * self.v_high)  # 0→1 over top 20%
+        vel_ratio_signed_low = (0.8 * self.v_low - qvel_now) / (-0.2 * self.v_low)     # 0→1 over bottom 20%
+        damp_high = jnp.clip(vel_ratio_signed_high, 0.0, 1.0)  # only active near +limit
+        damp_low = jnp.clip(vel_ratio_signed_low, 0.0, 1.0)    # only active near -limit
+        # Zero out the portion of torque that accelerates toward the limit
+        tau = tau * (1.0 - damp_high * (tau > 0).astype(jnp.float32))
+        tau = tau * (1.0 - damp_low * (tau < 0).astype(jnp.float32))
+
         #! need to repeat the action in a JAX-compatible way
         def action_repeater(_, data):
             data = data.replace(ctrl=tau)
@@ -471,6 +483,7 @@ class MyMJXEnv():
         r_dir = r_pos_mid * self._r_weights["w_vel_progress"] * dir_speed * speed_gate 
         r_mid = r_mid + r_dir
 
+        #TODO: this reward should use v_cmd_scale as well
         # Smoothness penalty on commanded joint velocity change (physical units).
         v_cmd_now = self.v_low + 0.5 * (self.v_high - self.v_low) * (action + 1.0)
         v_cmd_prev = self.v_low + 0.5 * (self.v_high - self.v_low) * (state.action_v_prev + 1.0)
