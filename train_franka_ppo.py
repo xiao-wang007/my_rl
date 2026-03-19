@@ -58,7 +58,7 @@ config_base = {
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
-    "ENT_COEF": 0.005,          # 0.1 was way too high for continuous control — causes random large actions
+    "ENT_COEF": 0.000,    #* 0.1 was way too high for continuous control — causes random large actions
     "VF_COEF": 0.5,
     "MAX_GRAD_NORM": 0.5,
     "ACTIVATION": "tanh",
