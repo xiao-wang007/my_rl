@@ -28,4 +28,5 @@ r_weights1 = {
    "w_action_rate": np.float32(0.001),
    "w_tilt": np.float32(1.0),
    "w_vel_limit": np.float32(0.5),   # penalty for approaching joint velocity limits
+   "w_approach": np.float32(1.0),    # reward for reducing distance to mid target
 }

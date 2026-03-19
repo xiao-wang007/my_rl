@@ -424,6 +424,13 @@ class MyMJXEnv():
         r_pos_mid = jnp.exp(-self._r_configs["alpha1"] * pos_err_mid**2)
         r_vel_mid = jnp.exp(-self._r_configs["alpha3"] * vel_err_mid**2)
 
+        # Distance-based shaping: reward for getting closer to mid target.
+        # Previous EE position from state (before this step).
+        x_prev = state.data.xpos[self.ee_body_id]
+        pos_err_prev = jnp.linalg.norm(x_prev - x_ee_mid)
+        # Positive when distance decreases (moving toward target).
+        r_approach = self._r_weights["w_approach"] * (pos_err_prev - pos_err_mid) / self._dt_env
+
         # Velocity only matters strongly when near the mid target
         r_vel_gated = r_pos_mid * r_vel_mid
             
@@ -450,6 +457,7 @@ class MyMJXEnv():
             self._r_weights["w_pos_mid"] * r_pos_mid
             + self._r_weights["w_vel_mid"] * r_vel_gated
             + self._r_weights["w_tilt"] * r_tilt_gated
+            + r_approach
         )
 
         # velocity direction at mid episode (use directional v to bound it)

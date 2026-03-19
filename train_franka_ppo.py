@@ -58,7 +58,7 @@ config_base = {
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
-    "ENT_COEF": 0.1,
+    "ENT_COEF": 0.005,          # 0.1 was way too high for continuous control — causes random large actions
     "VF_COEF": 0.5,
     "MAX_GRAD_NORM": 0.5,
     "ACTIVATION": "tanh",
@@ -93,8 +93,10 @@ config_base = {
     "PROFILE_CALLBACK_OVERHEAD": False,
 
     #* PD gain as actions, scheduling
-    "GAIN_SCHEDULE_SPLIT": 0.5,
-    "GAIN_SCHEDULE_END": 0.8,
+    #* Don't enable residual gains until the base velocity policy is solid.
+    #* 0.5 caused a reward drop at 50% progress. Push to 80-95%.
+    "GAIN_SCHEDULE_SPLIT": 0.8,
+    "GAIN_SCHEDULE_END": 0.95,
 }
 
 #! With NUM_STEPS = 20, set GAE_SCAN_UNROLL to 4.
