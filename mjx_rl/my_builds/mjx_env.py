@@ -29,7 +29,7 @@ class MJXState:
     x_ee_final: jnp.ndarray #! end-effector target position at the end of episode
     mid_done: jnp.ndarray #! flag indicating if mid target is achieved
     rng: jnp.ndarray
-    done_info: jnp.ndarray #! shape (6,) for each done condition
+    done_info: jnp.ndarray #! shape (7,) for each done condition + mid_done
 
 class MyMJXEnv():
     """Minimal single-env API expected by MJXGymnaxWrapper."""
@@ -260,7 +260,7 @@ class MyMJXEnv():
             x_ee_mid=x_ee_mid,
             v_ee_mid=v_ee_mid,
             rng=key,
-            done_info=jnp.zeros((6,), dtype=jnp.float32)
+            done_info=jnp.zeros((7,), dtype=jnp.float32)
         )
 
     def step(self, state: MJXState, action: jnp.ndarray, params=None):
@@ -363,7 +363,7 @@ class MyMJXEnv():
             x_ee_final=state.x_ee_final,
             mid_done=state.mid_done,
             rng=rng,
-            done_info=jnp.zeros((6,), dtype=jnp.float32)
+            done_info=jnp.zeros((7,), dtype=jnp.float32)
         ) #! damn! I forgot here the state got reinitialized therefore the env_state from 
         #! _terminal() with rewards and done=True won't be leaking through the new episode
 
@@ -388,7 +388,8 @@ class MyMJXEnv():
                                done_qpos_low, 
                                done_qpos_high, 
                                done_qvel_low, 
-                               done_qvel_high], dtype=jnp.float32)
+                               done_qvel_high,
+                               mid_done.astype(jnp.float32)], dtype=jnp.float32)
         next_state = next_state.replace(done_info=done_info)
 
         # Optional auto-reset behavior at terminal.
