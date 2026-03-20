@@ -38,7 +38,7 @@ print("env smoke: OK")
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
 # TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions
-TOTAL_TIMESTEPS = 64 * 128 * 500 # = 4_096_000, i.e. ~4.1M env transitions
+TOTAL_TIMESTEPS = 64 * 128 * 1000 # = 4_096_000, i.e. ~4.1M env transitions
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
