@@ -389,7 +389,8 @@ class MyMJXEnv():
                                done_qpos_high, 
                                done_qvel_low, 
                                done_qvel_high,
-                               mid_done.astype(jnp.float32)], dtype=jnp.float32)
+                               mid_done.astype(jnp.float32) * done.astype(jnp.float32)  # only count at terminal step
+                               ], dtype=jnp.float32)
         next_state = next_state.replace(done_info=done_info)
 
         # Optional auto-reset behavior at terminal.
