@@ -153,7 +153,7 @@ class MyMJXEnv():
             self.init_qpos = jnp.array([0.9207,  0.2574, -0.9527, -2.0683,  0.2799,  2.1147, 2.], dtype=jnp.float32)
         
         # gain bounds 
-        self.kp_base = jnp.array([100.0]*7, dtype=jnp.float32)
+        self.kp_base = jnp.array([50.0]*7, dtype=jnp.float32)
         self.kd_base = 2.0 * jnp.sqrt(self.kp_base)
         #! Keep residual gain authority small (~20% of base) to prevent
         #! destabilizing the PD controller when the schedule activates.
@@ -327,6 +327,11 @@ class MyMJXEnv():
         # toward its velocity bound; keep braking torque available.
         qvel_now = state.obs[7:14]
         tau = self._apply_velocity_guard(tau, qvel_now)
+
+        # Torque rate (dtau) saturation: Franka physical limit is ±1000 Nm/s.
+        dtau_max = 1000.0 * self._dt_env  # max torque change per env step
+        tau_prev = state.data.ctrl
+        tau = jnp.clip(tau, tau_prev - dtau_max, tau_prev + dtau_max)
 
         #! need to repeat the action in a JAX-compatible way
         def action_repeater(_, data):
