@@ -1,0 +1,7 @@
+{
+  "global_train_step": 64000,
+  "env_transition_step": 8192000,
+  "target_total_timesteps": 8192000,
+  "saved_at_unix": 1774142869.430786,
+  "wandb_run_id": "az4fgczf"
+}
