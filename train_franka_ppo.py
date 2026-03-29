@@ -1,12 +1,28 @@
 import json
 import os
+import platform
 import sys
 import time
 from pathlib import Path
 
-os.environ.setdefault("JAX_COMPILATION_CACHE_DIR", "/tmp/jax_compilation_cache")
-os.environ.setdefault("JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS", "0")
-os.makedirs(os.environ["JAX_COMPILATION_CACHE_DIR"], exist_ok=True)
+# cache path is now per host + conda env + python version and cache
+# can be fully disabled with MY_RL_DISABLE_JAX_CACHE=1 
+if os.environ.get("MY_RL_DISABLE_JAX_CACHE", "0") == "1":
+    os.environ["JAX_ENABLE_COMPILATION_CACHE"] = "0"
+else:
+    cache_root = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache")))
+    env_tag = os.environ.get("CONDA_DEFAULT_ENV", "noenv")
+    py_tag = f"py{sys.version_info.major}{sys.version_info.minor}"
+    host_tag = platform.node() or "unknown_host"
+    default_cache_dir = (
+        cache_root
+        / "my_rl"
+        / "jax_compilation_cache"
+        / f"{host_tag}_{env_tag}_{py_tag}"
+    )
+    os.environ.setdefault("JAX_COMPILATION_CACHE_DIR", str(default_cache_dir))
+    os.environ.setdefault("JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS", "0")
+    Path(os.environ["JAX_COMPILATION_CACHE_DIR"]).mkdir(parents=True, exist_ok=True)
 
 import jax
 import jax.numpy as jnp
@@ -38,7 +54,7 @@ print("env smoke: OK")
 
 # TOTAL_TIMESTEPS = 20 * 256 * 500 # = 2_560_000, i.e. ~2.56M env transitions
 # TOTAL_TIMESTEPS = 64 * 256 * 300 # = 4_915_200, i.e. ~4.9M env transitions
-TOTAL_TIMESTEPS = 64 * 128 * 1000 # = 4_096_000, i.e. ~4.1M env transitions
+TOTAL_TIMESTEPS = 64 * 1024 * 1000 # = 6_553_600, i.e. ~6.55M env transitions
 
 CHECKPOINT_DIR = Path("checkpoints")
 CHECKPOINT_FILE = CHECKPOINT_DIR / "train_franka_ppo.msgpack"
@@ -47,14 +63,14 @@ WANDB_RUN_ID: str | None = None
 
 config_base = {
     "LR": 3e-4,
-    "NUM_ENVS": 128,           # 1080Ti has 11GB; 2048 OOMs
+    "NUM_ENVS": 1024,           # 1080Ti has 11GB; 2048 OOMs
     "NUM_STEPS": 64,           # ep_len ~13, 32 steps is plenty for GAE
     "TOTAL_TIMESTEPS": TOTAL_TIMESTEPS,
     
     #* Keep a stable total-timestep target for progress scheduling across resumes.
     "TOTAL_TIMESTEPS_TARGET": TOTAL_TIMESTEPS,
     "UPDATE_EPOCHS": 4,   #* 4 gradient steps per minibatch, 32 total gradient steps per update
-    "NUM_MINIBATCHES": 4,     #* minibatch = 128*64/8 = 1024 samples
+    "NUM_MINIBATCHES": 32,     #* minibatch = 1024*64/32 = 2048 samples
     "GAMMA": 0.99,
     "GAE_LAMBDA": 0.95,
     "CLIP_EPS": 0.2,
@@ -72,7 +88,7 @@ config_base = {
     
     #* Host debug callback every N PPO updates (1 = every update).
     #* Higher = fewer GPU→host sync stalls. 50 is a good balance.
-    "DEBUG_PRINT_INTERVAL_UPDATES": 1,
+    "DEBUG_PRINT_INTERVAL_UPDATES": 20,
     "WANDB_LOG": True,
     
     #* Host wandb callback every N PPO updates (1 = every update).
