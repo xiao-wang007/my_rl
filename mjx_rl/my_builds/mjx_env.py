@@ -42,6 +42,7 @@ class MyMJXEnv():
         qpos_init: jnp.ndarray = None,
         r_configs: dict = None,
         r_weights: dict = None,
+        disable_collisions: bool = False,
     ):
         self.observation_size = observation_size
         self.action_size = action_size
@@ -52,6 +53,12 @@ class MyMJXEnv():
 
         self.mj_model = mujoco.MjModel.from_xml_path(
             (FRANKA_ROOT_PATH / 'panda_nohand.xml').as_posix())
+        if disable_collisions:
+            # Menagerie Panda places collision geoms in group 3.
+            # For free-space training, disabling contacts removes unnecessary work.
+            collision_mask = self.mj_model.geom_group == 3
+            self.mj_model.geom_contype[collision_mask] = 0
+            self.mj_model.geom_conaffinity[collision_mask] = 0
         #! Newton is faster than CG for small systems without heavy contacts.
         #! CG is only better for large contact-rich scenes.
         self.mj_model.opt.solver = mujoco.mjtSolver.mjSOL_NEWTON
@@ -537,13 +544,14 @@ class MyMJXEnv():
         return reward, mid_done
 
 
-def make_mjx_env():
+def make_mjx_env(disable_collisions: bool = True):
     """Factory used by training config."""
     return MyMJXEnv(observation_size=24, 
                     action_size=21, 
                     episode_length=200, 
                     r_configs=r_configs1, 
-                    r_weights=r_weights1)
+                    r_weights=r_weights1,
+                    disable_collisions=disable_collisions)
 
 
 # Example wiring with purejaxrl/purejaxrl/ppo_continuous_action.py:
