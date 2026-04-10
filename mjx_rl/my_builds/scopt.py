@@ -10,6 +10,7 @@ import jax.numpy as jnp
 import jax.scipy.linalg as jsp_linalg
 import mujoco
 from mujoco import mjx
+from typing import NamedTuple
 
 
 @dataclass(frozen=True)
@@ -128,7 +129,11 @@ def franka_dynamics_jacobians(
     qdot: jax.Array,
     tau: jax.Array,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
-    """Return dqddot/dq, dqddot/dqdot, dqddot/dtau."""
+    """ #! Return dqddot/dq, dqddot/dqdot, dqddot/dtau. these are  
+        these are sub-blocks of linearized continuous-time dynamics: 
+        dx/dt = A x + B u, where x=[q; qdot], u=tau.
+    """
+    
 
     q = jnp.asarray(q, dtype=jnp.float32)
     qdot = jnp.asarray(qdot, dtype=jnp.float32)
@@ -254,3 +259,126 @@ def make_jitted_state_space_jacobians(
         model, q, qdot, tau, dt=dt, method=method
     )
     return jax.jit(cont_fn), jax.jit(disc_fn)
+
+
+#*##################################################################
+#*################# Build the QP #######################
+#*##################################################################
+
+#! ###### for Costs
+class TerminalTragets(NamedTuple):
+    p_c_obj: jnp.ndarray      # (3,)
+    v_c_obj: jnp.ndarray      # (3,)
+    beta_star: jnp.ndarray    # () or (1,)
+    psi_star: jnp.ndarray     # () or (1,)
+
+class LinearizedTerminal(NamedTuple):
+    p0: jnp.ndarray           # (3,)
+    Jp: jnp.ndarray           # (3, nq)
+    v0: jnp.ndarray           # (3,)
+    Jvq: jnp.ndarray          # (3, nq)
+    Jvdq: jnp.ndarray         # (3, nq)
+    beta0: jnp.ndarray        # (1,)
+    Jbeta: jnp.ndarray        # (1, nq)
+    psi0: jnp.ndarray         # (1,)
+    Jpsi: jnp.ndarray         # (1, nq)
+
+
+def p_ee_w(q: jnp.ndarray,
+               model: mjx.Model, 
+               data: mjx.Data,
+               ee_body_id: int) -> jnp.ndarray:
+    """ Compute end-effector position in world frame. Model should be the same
+        as used in the simulation, but not the same model data """
+    data = data.replace(qpos=q)
+    data = mjx.forward(model, data)
+    return data.xpos[ee_body_id]
+
+
+def v_ee_w(q: jnp.ndarray,
+               qdot: jnp.ndarray,
+               model: mjx.Model,
+               data: mjx.Data,
+               ee_body_id: int) -> jnp.ndarray:
+    """ Compute end-effector velocity in world frame. Model should be the same
+        as used in the simulation, but not the same model data """
+    data = data.replace(qpos=q, qvel=qdot)
+    data = mjx.forward(model, data)
+    # Jacobian of EE body-frame origin position wrt generalized velocity.
+    jacp, _ = mjx.jac(model, data, data.xpos[ee_body_id], ee_body_id)
+    return jacp.T @ qdot
+
+
+def p_ee_jac_w(q: jnp.ndarray,
+               model: mjx.Model, 
+               data: mjx.Data,
+               ee_body_id: int) -> jnp.ndarray:
+    """ Compute end-effector position Jacobian in world frame. Model should be the same
+        as used in the simulation, but not the same model data """
+    data = data.replace(qpos=q)
+    data = mjx.forward(model, data)
+    jacp, _ = mjx.jac(model, data, data.xpos[ee_body_id], ee_body_id) #! 3rd arg is the point in w
+    return jacp
+
+
+def p_ee_obj(q_now: jnp.ndarray,
+             p_obj: jnp.ndarray,
+             r_obj: jnp.ndarray,
+             model: mjx.Model,
+             data: mjx.Data,
+             ee_body_id: int) -> jax.Array:
+    """ Computes linearized version of end-effector position in object frame."""
+    pee_w = p_ee_w(q=q_now, model=model, data=data, ee_body_id=ee_body_id)
+    return r_obj.T @ (pee_w - p_obj)
+
+
+def inv_m_dir(q: jnp.ndarray,
+              d: jnp.ndarray,
+              model: mjx.Model,
+              data: mjx.Data,
+              ee_body_id: int) -> jnp.ndarray:
+    # compute jacobian
+    jacp = p_ee_jac_w(q=q, model=model, data=data, ee_body_id=ee_body_id)
+
+    # compute M(q)
+    data = data.replace(qpos=q, qvel=jnp.zeros_like(q, dtype=jnp.float32))
+    data = mjx.forward(model, data)
+    M = mjx.full_m(model, data)
+
+    d = jnp.reshape(d, (3, 1))
+    return (d.T @ jacp.T @ jsp_linalg.solve(M, jacp @ d)).squeeze()
+
+
+def inv_m_dir_grad(q: jnp.ndarray,
+                   d: jnp.ndarray,
+                   model: mjx.Model,
+                   data: mjx.Data,
+                   ee_body_id: int) -> jnp.ndarray:
+    grad = jax.grad(inv_m_dir, argnums=0)(q, d, model, data, ee_body_id)
+    return grad
+
+
+def beta_tilt(q: jnp.ndarray,
+              model: mjx.Model,
+              data: mjx.Data,
+              ee_body_id: int) -> jnp.ndarray:
+    """ #*Compute tilt angle of end-effector z-axis from vertical. 
+    """
+    data = data.replace(qpos=q)
+    data = mjx.forward(model, data)
+    # Get the 3rd column of the rotation matrix for the EE body.
+    R_ee = data.xmat[ee_body_id].reshape(3, 3)
+    z_axis = R_ee[:, 2]
+    vertical = jnp.array([0.0, 0.0, 1.0], dtype=jnp.float32)
+    cos_beta = jnp.clip(z_axis @ vertical, -1.0, 1.0)
+    # beta = jnp.arccos(cos_beta)
+    return cos_beta
+
+#! I don't think I need psi_ee_obj in cost for now.
+
+"""
+#! need line search or trust region to take a step in the direction of inv_m_dir_grad
+i.e. a0 + im_dir_grad.T @ dqN, the step size dqN could be too large 
+"""
+
+#TODO: my decision variables are increments, i.e. dq, dv, dtau
