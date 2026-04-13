@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="000_finger">
+    <link name="finger">
+      <inertial>
+        <pose>0 0 0 0 0 0 </pose>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>2e-5</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>2e-5</iyy>
+          <iyz>0</iyz>
+          <izz>2e-5</izz>
+        </inertia>
+      </inertial>
+      <visual name="finger_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <diffuse> 1.0 0.65 0. 1.0</diffuse>
+        </material>
+      </visual>
+
+      <collision name="finger_collision">
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+    </link>
+  </model>
+</sdf>

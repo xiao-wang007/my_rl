@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="sphere5">
+    <link name="dummy5">
+      <inertial>
+        <pose>0 0 0 0 0 0 </pose>
+        <mass>0.</mass>
+        <inertia>
+          <ixx>0</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0</iyy>
+          <iyz>0</iyz>
+          <izz>0</izz>
+        </inertia>
+      </inertial>
+      <visual name="sphere5_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.005</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <diffuse> 1.0 0.65 0. 1.0</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

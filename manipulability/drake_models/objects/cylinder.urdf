@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<robot name="000_my_cylinder">
+  <material name="green">
+    <color rgba=".3 .6 .4 1"/>
+  </material>
+  <material name="red">
+    <color rgba=".3 .3 .7 1"/>
+  </material>
+  <material name="blue">
+    <color rgba="0.1 0.3 0.5 1"/>
+  </material>
+
+    <link name="cylinder_base_link">
+      <inertial>
+        <pose>0 0 0 0 0 0 </pose>
+        <mass>1.</mass>
+        <inertia>
+          <ixx>3.333e-3</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>3.333e-4</iyy>
+          <iyz>0</iyz>
+          <izz>5.e-3</izz>
+        </inertia>
+      </inertial>
+      <visual name="cylinder_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+        <cylinder length="0.1" radius="0.1"/>
+        </geometry>
+      <material name="red"/>
+      </visual>
+
+      <visual name="marker">
+        <origin rpy="0 0 0" xyz="0.06 0 0.05"/>
+        <geometry>
+          <cylinder length="0.001" radius=".02"/>
+        </geometry>
+      <material name="green"/>
+      </visual>
+      <!--
+      This places contact spheres on the corners of the visual box and a
+      *slightly* smaller inset contact box (centered on the visual origin). This
+      accounts for issues in the contact computation providing stable table
+      contact *and* supports grasping.
+      When the box is in stable contact with the ground plane, the corner
+      spheres will provide fixed contact points (simulating distributed contact
+      points around the face).  However, for arbitrary grip configuration, the
+      slightly inset box will provide contact with a *slight* offset (in this
+      case a deviation of 0.0005 m from the visual surface).
+     -->
+      <collision name="cylinder_collision">
+        <geometry>
+          <cylinder length="0.1" radius="0.1"/>
+        </geometry>
+      </collision>
+
+      <collision name="point_collision1">
+        <origin rpy="0 0 0" xyz="0.1 0 0"/>
+        <geometry>
+          <!-- <sphere>
+            <radius>1e-7</radius>
+          </sphere> -->
+          <sphere radius="1e-7"/>
+        </geometry>
+      </collision>
+    </link>
+
+</robot>
