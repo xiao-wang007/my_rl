@@ -376,6 +376,9 @@ def beta_tilt(q: jnp.ndarray,
 
 #! I don't think I need psi_ee_obj in cost for now.
 
+def linearize_terminal():
+    raise NotImplementedError("TODO: implement linearized terminal cost targets.")
+
 """
 #! need line search or trust region to take a step in the direction of inv_m_dir_grad
 i.e. a0 + im_dir_grad.T @ dqN, the step size dqN could be too large 
