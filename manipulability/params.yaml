@@ -16,7 +16,7 @@ bhat:
   - 0.0
   - 1.0
   - 0.0
-angle_at_tf: 20.0
+angle_at_tf: 30.0
 tilting_relax: 0.2
 p_ee_target_w:
   - 0.4

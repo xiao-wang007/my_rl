@@ -13,15 +13,15 @@ from src.build_and_solve import (
 )
 
 q_init = np.array([0.6465, -0.4952, -0.0675, -3.,  0.6238,  2.572 ,  0.2666])
-
-try:
-    meshcat = StartMeshcat()
-except RuntimeError as e:
-    print(f"Meshcat unavailable, continuing without visualization: {e}")
-    meshcat = None
-
+meshcat = StartMeshcat()
 plant_vis, context_vis, sceneGraph_vis, diagram_vis = scene_visualizer(arm_pose=q_init, meshcat=meshcat, h=0.001)
 
+
+if meshcat is not None:
+    try:
+        input("Open the Meshcat localhost page, then press Enter to start optimization...")
+    except EOFError:
+        pass
 
 
 with (Path(__file__).resolve().parent / "params.yaml").open("r", encoding="utf-8") as f:
@@ -42,8 +42,6 @@ h = params["h"]
 csts.h = h
 maxiter = params["maxiter"]
 
-print("check here 1")
-
 prog, q_vars, v_vars, u_vars = prog_init(N=N, q0=q_init_np)
 prog_add_csts(
     prog,
@@ -57,10 +55,9 @@ prog_add_csts(
     np.array(params["p_ee_target_w"]),
     params["p_ee_relaxation"],
 )
-print("check here 2")
+
 prog_add_cost(prog, q_vars, u_vars)
 
-print("check here 3")
 prog_set_initial_guess(
     prog,
     q_vars,
@@ -69,9 +66,7 @@ prog_set_initial_guess(
     q_init_np
 )
 
-print("check here 4")
 q_sol, v_sol, u_sol = prog_solve(prog, q_vars, v_vars, u_vars, maxiter=maxiter)
-print("check here 5")
 
 
 #* visualize qf

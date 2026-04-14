@@ -30,10 +30,66 @@ from functools import partial
 from collections import OrderedDict, namedtuple
 from pydrake.multibody.tree import FixedOffsetFrame, SpatialInertia, UnitInertia
 from pathlib import Path
+from src.workspace_split import split_workspace
 
 import sys
 
-def scene_visualizer(arm_pose, meshcat, h=0.001):
+from src.workspace_split import *
+
+def visualize_workspace(meshcat, z_obj=0.03):
+    centre = ISO2mine_converter()
+    centre_copy = centre.copy()
+    centre[-1] = z_obj
+    coords = split_workspace(centre=centre, z=z_obj)
+    corners = np.asarray(coords["corners"], dtype=float)
+
+    edge_x = np.linalg.norm(corners[0] - corners[1])
+    edge_y = np.linalg.norm(corners[1] - corners[2])
+    plane_center = centre_copy # original WS spec 
+    plane_thickness = 0.4
+    meshcat.SetObject(
+        "/workspace/plane",
+        geometry.Box(edge_x, edge_y, plane_thickness),
+        geometry.Rgba(0.05, 0.55, 0.9, 0.25),
+    )
+    meshcat.SetTransform(
+        "/workspace/plane",
+        RigidTransform(RotationMatrix.Identity(), plane_center),
+    )
+
+    block_centres = coords["block_centres"]
+    print("block centres: \n")
+    for centre in block_centres:
+        print(centre)
+
+    centre_radius = 0.005
+    for i, centre in enumerate(block_centres, start=1):
+        centre_path = f"/workspace/centres/centre_{i}"
+        meshcat.SetObject(
+            centre_path,
+            geometry.Sphere(centre_radius),
+            geometry.Rgba(1.0, 0.25, 0.1, 0.85),
+        )
+        meshcat.SetTransform(centre_path, RigidTransform(p=centre))
+    
+    l1_end_pts, l2_end_pts, l3_end_pts, l4_end_pts = coords["grid_vertices"]
+    edge1, edge2, edge3, edge4 = coords["edges"]
+
+    line_starts = [l1_end_pts[0], l2_end_pts[0], l3_end_pts[0], l4_end_pts[0], 
+                   edge1[0], edge2[0], edge3[0], edge4[0]]
+    line_ends = [l1_end_pts[1], l2_end_pts[1], l3_end_pts[1], l4_end_pts[1], 
+                 edge1[1], edge2[1], edge3[1], edge4[1]]
+
+    meshcat.SetLineSegments(
+        "/workspace/blocks/grid",
+        np.asfortranarray(np.array(line_starts, dtype=float).T),
+        np.asfortranarray(np.array(line_ends, dtype=float).T),
+        line_width=2.0,
+        rgba=geometry.Rgba(0.0, 0.0, 0.7, 0.6),
+    )
+
+
+def scene_visualizer(arm_pose, meshcat, h=0.001, visualize_ws=True, z_obj=0.03):
     """
     target_pose is of RigidTransform()
     """
@@ -138,4 +194,9 @@ def scene_visualizer(arm_pose, meshcat, h=0.001):
     # visualizing the time instance using the double type diagram
     plant_double.get_actuation_input_port().FixValue(double_context, np.zeros(7))
     diagram_double.ForcedPublish(root_context_double) # publish the corresponding diagram
+
+    #* visualize workspace
+    if visualize_ws:
+        visualize_workspace(meshcat, z_obj=z_obj)
+
     return plant_double, double_context, sceneGraph_double, diagram_double
